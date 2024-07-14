@@ -1,8 +1,9 @@
 import cv2
 import os
 import numpy as np
+import screeninfo
 
-def display_image(image_path):
+def display_image(image_path, window_name):
     # 画像のパスをチェック
     abs_path = os.path.abspath(image_path)
     if not os.path.exists(abs_path):
@@ -17,16 +18,27 @@ def display_image(image_path):
         print(f"Error: Unable to load image at {abs_path}")
         return
     
-     # 16:9アスペクト比にリサイズ
+    # 16:9アスペクト比にリサイズ
     height, width = image.shape[:2]
     new_width = 3840
     new_height = int(new_width * 10 / 16)
     resized_image = cv2.resize(image, (new_width, new_height))
 
     # 画像をウィンドウに表示
-    cv2.imshow('Image', resized_image)
+    cv2.imshow(window_name, resized_image)
 
 def main():
+    monitors = screeninfo.get_monitors()
+    num_monitors = len(monitors)
+
+    if num_monitors < 2:
+        monitor = monitors[0]
+    else:
+        monitor = monitors[1]
+        
+    screen_x = monitor.x
+    screen_y = monitor.y
+
     print("Press 'a' to display comic-effect1.png")
     print("Press 's' to display comic-effect2.png")
     print("Press 'd' to display comic-effect3.png")
@@ -44,44 +56,45 @@ def main():
     print("Press 'n' to display comic-effect15.png")
     print("Press 'q' to quit")
 
-
-    # OpenCVのウィンドウを表示
-    cv2.namedWindow('Image')
-    cv2.imshow('Image', 255 * np.ones((100, 300), dtype=np.uint8))  # 初期の空白画像を表示
+    window_name = 'Image'
+    # OpenCVのウィンドウを作成
+    cv2.namedWindow(window_name)
+    cv2.moveWindow(window_name, screen_x, screen_y)
+    cv2.imshow(window_name, 255 * np.ones((100, 300), dtype=np.uint8))  # 初期の空白画像を表示
 
     while True:
         key = cv2.waitKey(0) & 0xFF
 
         if key == ord('a'):
-            display_image('./images/comic-effect1.png')
+            display_image('./images/comic-effect1.png', window_name)
         elif key == ord('s'):
-            display_image('images/comic-effect2.png')
+            display_image('images/comic-effect2.png', window_name)
         elif key == ord('d'):
-            display_image('images/comic-effect3.png')
+            display_image('images/comic-effect3.png', window_name)
         elif key == ord('f'):
-            display_image('images/comic-effect4.png')
+            display_image('images/comic-effect4.png', window_name)
         elif key == ord('g'):
-            display_image('images/comic-effect5.png')
+            display_image('images/comic-effect5.png', window_name)
         elif key == ord('h'):
-            display_image('images/comic-effect6.png')
+            display_image('images/comic-effect6.png', window_name)
         elif key == ord('j'):
-            display_image('images/comic-effect7.png')
+            display_image('images/comic-effect7.png', window_name)
         elif key == ord('k'):
-            display_image('images/comic-effect8.png')
+            display_image('images/comic-effect8.png', window_name)
         elif key == ord('l'):
-            display_image('images/comic-effect9.png')
+            display_image('images/comic-effect9.png', window_name)
         elif key == ord('z'):
-            display_image('images/comic-effect10.png')
+            display_image('images/comic-effect10.png', window_name)
         elif key == ord('x'):
-            display_image('images/comic-effect11.png')
+            display_image('images/comic-effect11.png', window_name)
         elif key == ord('c'):
-            display_image('images/comic-effect12.png')
+            display_image('images/comic-effect12.png', window_name)
         elif key == ord('v'):
-            display_image('images/comic-effect13.png')
+            display_image('images/comic-effect13.png', window_name)
         elif key == ord('b'):
-            display_image('images/comic-effect14.png')
+            display_image('images/comic-effect14.png', window_name)
         elif key == ord('n'):
-            display_image('images/comic-effect15.png')
+            display_image('images/comic-effect15.png', window_name)
         elif key == ord('q'):
             print("Exiting...")
             break
