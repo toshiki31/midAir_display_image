@@ -46,14 +46,16 @@ def main():
     print("Press 'g' to display comic-effect5.png")
     print("Press 'h' to display comic-effect6.png")
     print("Press 'j' to display comic-effect7.png")
-    print("Press 'k' to display comic-effect8.png")
-    print("Press 'l' to display comic-effect9.png")
-    print("Press 'z' to display comic-effect10.png")
-    print("Press 'x' to display comic-effect11.png")
-    print("Press 'c' to display comic-effect12.png")
-    print("Press 'v' to display comic-effect13.png")
-    print("Press 'b' to display comic-effect14.png")
-    print("Press 'n' to display comic-effect15.png")
+    print("Press 'k' to display comic-effect16.png")
+    print("Press 'l' to display comic-effect8.png")
+    print("Press 'z' to display comic-effect9.png")
+    print("Press 'x' to display comic-effect10.png")
+    print("Press 'c' to display comic-effect11.png")
+    print("Press 'v' to display comic-effect12.png")
+    print("Press 'b' to display comic-effect17.png")
+    print("Press 'n' to display comic-effect14.png")
+    print("Press 'm' to display comic-effect15.png")
+
     print("Press 'q' to quit")
 
     window_name = 'Image'
@@ -80,21 +82,25 @@ def main():
         elif key == ord('j'):
             display_image('images/comic-effect7.png', window_name)
         elif key == ord('k'):
-            display_image('images/comic-effect8.png', window_name)
+            display_image('images/comic-effect16.png', window_name)
         elif key == ord('l'):
-            display_image('images/comic-effect9.png', window_name)
+            display_image('images/comic-effect8.png', window_name)
         elif key == ord('z'):
-            display_image('images/comic-effect10.png', window_name)
+            display_image('images/comic-effect9.png', window_name)
         elif key == ord('x'):
-            display_image('images/comic-effect11.png', window_name)
+            display_image('images/comic-effect10.png', window_name)
         elif key == ord('c'):
-            display_image('images/comic-effect12.png', window_name)
+            display_image('images/comic-effect11.png', window_name)
         elif key == ord('v'):
-            display_image('images/comic-effect13.png', window_name)
+            display_image('images/comic-effect12.png', window_name)
         elif key == ord('b'):
-            display_image('images/comic-effect14.png', window_name)
+            display_image('images/comic-effect17.png', window_name)
         elif key == ord('n'):
+            display_image('images/comic-effect14.png', window_name)
+        elif key == ord('m'):
             display_image('images/comic-effect15.png', window_name)
+        elif key == 13:  # Enter key
+            display_image('images/black.png', window_name)
         elif key == ord('q'):
             print("Exiting...")
             break
