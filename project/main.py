@@ -32,7 +32,9 @@ def display_image(image_path, window_name, log_list):
     # ログに追加
     log_list.append((datetime.now().strftime("%Y-%m-%d %H:%M:%S"), image_path))
 
-def write_log_to_csv(log_list, filename='image_display_log.csv'):
+def write_log_to_csv(log_list):
+    date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    filename=f'{date}_image_display_log.csv'
     with open(filename, 'w', newline='') as csvfile:
         fieldnames = ['timestamp', 'image_path']
         writer = csv.writer(csvfile)
