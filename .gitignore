@@ -3,3 +3,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 project/myenv/*
+project/.venv/*
