@@ -1,4 +1,5 @@
 import tkinter as tk
+from PIL import Image, ImageTk
 
 # メインウィンドウを作成
 root = tk.Tk()
@@ -27,11 +28,18 @@ popup.title("表示ウィンドウ")
 size = root.maxsize()
 popup.geometry('{}x{}+0+0'.format(*size))
 
+# 画像の読み込み
+img = Image.open("images/fukidashi.png")
+img = img.resize((screen_width,200), Image.Resampling.LANCZOS)
+photo = ImageTk.PhotoImage(img)
 
-# 別ウィンドウに表示するためのラベルを作成
-popup_label = tk.Label(popup, text="ここに文字が表示されます", font=("Arial", 60))
-# ラベルをx=100, y=50の位置に配置
-popup_label.place(x=100, y=50)
+# Canvasを作成して画像を表示
+canvas = tk.Canvas(popup, width=screen_width)
+canvas.pack()
+canvas.create_image(0, 0, image=photo, anchor=tk.NW)
+
+# テキストを画像内に表示する
+text_id = canvas.create_text(screen_width/2, 80, text="ここに文字が表示されます", font=("Arial", 60), fill="black")
 
 # テキスト入力フィールド
 entry = tk.Entry(root, width=30)
@@ -49,12 +57,12 @@ def display_text_slowly(words, index=0):
     if index < len(words):
         # これまでのテキストに現在の単語を追加して表示
         current_text = words[index]
-        popup_label.config(text=current_text)
+        canvas.itemconfig(text_id, text=current_text)
         # 1秒後に次の単語を表示
         popup.after(2000, display_text_slowly, words, index + 1)
     else:
         # テキストを空にする
-        popup_label.config(text="")
+        canvas.itemconfig(text_id, text="")
         # 入力フィールドのテキストを空にする
         entry.delete(0, tk.END)
         # すべての単語を表示し終わったら、入力フィールドにフォーカスを戻す
@@ -65,7 +73,7 @@ def display_text_slowly(words, index=0):
 def update_label(event=None):
     typed_text = entry.get()  # 入力フィールドからテキストを取得
     words = typed_text.split()  # スペースで分割
-    popup_label.config(text="")  # 別ウィンドウのラベルにテキストを表示
+    canvas.itemconfig(text_id, text="")  # 画像内にテキストを表示
     display_text_slowly(words)  # テキストを遅らせて表示
 
 # エンターキーが押されたときにラベルを更新
