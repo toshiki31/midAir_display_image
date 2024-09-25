@@ -1,0 +1,16 @@
+boto3==1.35.26
+botocore==1.35.26
+Cython==3.0.11
+docutils==0.21.2
+jmespath==1.0.1
+numpy==2.1.1
+opencv-python==4.10.0.84
+pillow==10.4.0
+PyAudio==0.2.14
+pyobjc-core==10.3.1
+pyobjc-framework-Cocoa==10.3.1
+python-dateutil==2.9.0.post0
+s3transfer==0.10.2
+screeninfo==0.8.1
+six==1.16.0
+urllib3==2.2.3
