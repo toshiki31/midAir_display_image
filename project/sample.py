@@ -20,7 +20,7 @@ def display_image(image_path, window_name, log_list):
         print(f"Error: Unable to load image at {abs_path}")
         return
     
-    # 16:9アスペクト比にリサイズ
+    # 16:10アスペクト比にリサイズ
     height, width = image.shape[:2]
     new_width = 3840
     new_height = int(new_width * 10 / 16)
