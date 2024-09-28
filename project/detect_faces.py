@@ -101,7 +101,7 @@ while(True):
         elif firstEmotion['Type'] == 'CALM':
             display_image('./images/comic-effect7.png', window_name)
         elif firstEmotion['Type'] == 'FEAR':
-            display_image('./images/comic-effect13.png', window_name)
+            display_image('./images/comic-effect18.png', window_name)
         elif firstEmotion['Type'] == 'SAD':
             display_image('./images/comic-effect17.png', window_name)
         else:
