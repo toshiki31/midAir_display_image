@@ -63,7 +63,7 @@ canvas.pack()
 canvas.create_image(0, 0, image=photo, anchor=tk.NW)
 
 # テキストを画像内に表示する
-text_id = canvas.create_text(popup_width / 2, 80, text="ここに文字が表示されます", font=("Arial", 80, "bold"), fill="black")
+text_id = canvas.create_text(popup_width / 2, 80, text="ここに文字が表示されます", font=("Arial", 100, "bold"), fill="black")
 
 # テキスト入力フィールド (改行を許可)
 entry = tk.Text(root, width=30, height=5)
