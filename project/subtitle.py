@@ -65,8 +65,8 @@ canvas.create_image(0, 0, image=photo, anchor=tk.NW)
 # テキストを画像内に表示する
 text_id = canvas.create_text(popup_width / 2, 80, text="ここに文字が表示されます", font=("Arial", 80, "bold"), fill="black")
 
-# テキスト入力フィールド
-entry = tk.Entry(root, width=30)
+# テキスト入力フィールド (改行を許可)
+entry = tk.Text(root, width=30, height=5)
 entry.pack(pady=20)
 
 # 初期フォーカスをテキスト入力フィールドに設定
@@ -77,30 +77,30 @@ def set_focus():
 root.after(100, set_focus)
 
 # テキスト表示を遅らせるための関数
-def display_text_slowly(words, index=0):
-    if index < len(words):
-        # これまでのテキストに現在の単語を追加して表示
-        current_text = words[index]
+def display_text_slowly(lines, index=0):
+    if index < len(lines):
+        # これまでのテキストに現在の行を追加して表示
+        current_text = lines[index]
         canvas.itemconfig(text_id, text=current_text)
-        # 1秒後に次の単語を表示
-        popup.after(2000, display_text_slowly, words, index + 1)
+        # 2秒後に次の行を表示
+        popup.after(2000, display_text_slowly, lines, index + 1)
     else:
         # テキストを空にする
         canvas.itemconfig(text_id, text="")
         # 入力フィールドのテキストを空にする
-        entry.delete(0, tk.END)
-        # すべての単語を表示し終わったら、入力フィールドにフォーカスを戻す
+        entry.delete("1.0", tk.END)
+        # すべての行を表示し終わったら、入力フィールドにフォーカスを戻す
         set_focus()
 
 # 入力内容を別ウィンドウのラベルに反映する関数
 def update_label(event=None):
-    typed_text = entry.get()  # 入力フィールドからテキストを取得
-    words = typed_text.split()  # スペースで分割
+    typed_text = entry.get("1.0", tk.END).strip()  # 入力フィールドからテキストを取得
+    lines = typed_text.splitlines()  # 改行で分割
     canvas.itemconfig(text_id, text="")  # 画像内にテキストを表示
-    display_text_slowly(words)  # テキストを遅らせて表示
+    display_text_slowly(lines)  # テキストを遅らせて表示
 
-# エンターキーが押されたときにラベルを更新
-entry.bind("<Return>", update_label)
+# Shift + Enter で改行、Enterキーが押されたときにラベルを更新
+entry.bind("<Return>", lambda event: update_label() if not event.state & 1 else None)
 
 # メインループを開始
 root.mainloop()
