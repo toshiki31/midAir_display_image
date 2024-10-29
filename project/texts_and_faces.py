@@ -2,16 +2,17 @@ import asyncio
 import pyaudio
 import boto3
 import logging
+import os
 import cv2
 import numpy as np
-import os
 import screeninfo
+import time
+from botocore.exceptions import ClientError
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-from botocore.exceptions import ClientError
 
-# Transcription Configuration
+# Configuration
 SAMPLE_RATE = 16000
 BYTES_PER_SAMPLE = 2
 CHANNEL_NUMS = 1
@@ -20,21 +21,13 @@ REGION = "ap-northeast-1"
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP"
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
+SILENT_SECONDS = 3
+SILENT_SECONDS2 = 5
+SILENT_SECONDS3 = 7
 
-# detect faces Configuration 
-scale_factor = .15
-green = (0,255,0)
-red = (0,0,255)
-frame_thickness = 2
-cap = cv2.VideoCapture(0)
-session = boto3.Session(profile_name="rekognition")
-rekognition = boto3.client('rekognition')
-
-# Setup font
-fontscale = 1.0
-color = (0, 120, 238)
-fontface = cv2.FONT_HERSHEY_DUPLEX
-
+# Setup logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 画像表示するモニターの設定
 monitors = screeninfo.get_monitors()
@@ -50,16 +43,13 @@ window_name = 'Image'
 cv2.namedWindow(window_name)
 cv2.moveWindow(window_name, screen_x, screen_y)
 cv2.imshow(window_name, 255 * np.ones((100, 300), dtype=np.uint8))  # 初期の空白画像を表示
-
-# Setup logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+logger.info("Displaying initial image.")
 
 def display_image(image_path, window_name):
     # 画像のパスをチェック
     abs_path = os.path.abspath(image_path)
     if not os.path.exists(abs_path):
-        logger.error(f"Error: The path %abs_path% does not exist.")
+        logger.error(f"Error: The path {abs_path} does not exist.")
         return
     
     # 画像を読み込み
@@ -67,7 +57,7 @@ def display_image(image_path, window_name):
     
     # 画像が正しく読み込まれたか確認
     if image is None:
-        logger.error(f"Error: Unable to load image at %abs_path%")
+        logger.error(f"Error: Unable to load image at {abs_path}")
         return
     
     # 16:10アスペクト比にリサイズ
@@ -77,7 +67,6 @@ def display_image(image_path, window_name):
 
     # 画像をウィンドウに表示
     cv2.imshow(window_name, resized_image)
-
 
 class ComprehendDetect:
     """Handles sentiment detection using Amazon Comprehend."""
@@ -93,11 +82,11 @@ class ComprehendDetect:
             logger.info("Detected sentiment: %s", sentiment)
             # 音声の感情分析結果によって画像を変更
             if sentiment == 'POSITIVE':
-                display_image('./images/comic-effect4.png', window_name)
+                display_image('./images/talking_positive.png', window_name)
             elif sentiment == 'NEGATIVE':
-                display_image('./images/comic-effect17.png', window_name)
+                display_image('./images/talking_negative.png', window_name)
             else:
-                display_image('./images/black.png', window_name)
+                display_image('./images/talking.png', window_name)
             return sentiment
         except ClientError as error:
             logger.error("Error detecting sentiment: %s", error)
@@ -118,9 +107,9 @@ class MyEventHandler(TranscriptResultStreamHandler):
             for alt in result.alternatives:
                 transcript_text = alt.transcript
                 logger.info("Transcription: %s", transcript_text)
-                self.analyze_sentiment(transcript_text)
+                await self.analyze_sentiment(transcript_text)
     
-    def analyze_sentiment(self, text):
+    async def analyze_sentiment(self, text):
         """Performs sentiment analysis on transcribed text."""
         comp_detect.detect_sentiment(text, COMPREHEND_LANGUAGE_CODE)
 
@@ -134,6 +123,7 @@ async def basic_transcribe():
         media_sample_rate_hz=SAMPLE_RATE,
         media_encoding=MEDIA_ENCODING,
     )
+    logger.info("Started transcription stream.")
 
     # PyAudio setup for live audio capture
     p = pyaudio.PyAudio()
@@ -144,96 +134,91 @@ async def basic_transcribe():
                               rate=SAMPLE_RATE,
                               input=True,
                               frames_per_buffer=CHUNK_SIZE)
+        logger.info("Audio stream opened.")
 
         async def write_chunks():
             """Captures audio and sends it to Transcribe in chunks."""
+            global last_audio_time # 最後に音声を送信した時間をグローバル変数として扱う
+
             try:
                 while True:
                     # 非同期で読み取り
-                    audio_data = audio_stream.read(CHUNK_SIZE, exception_on_overflow=False)
+                    audio_data = await asyncio.to_thread(audio_stream.read, CHUNK_SIZE, exception_on_overflow=False)
+                    audio_np = np.frombuffer(audio_data, dtype=np.int16)
+                    if np.abs(audio_np).mean() > 100:
+                        last_audio_time = time.time() # 最後に音声を送信した時間を更新
                     await stream.input_stream.send_audio_event(audio_chunk=audio_data)
             except asyncio.CancelledError:
                 pass
+            except Exception as e:
+                logger.error(f"Error in write_chunks: {e}")
             finally:
                 await stream.input_stream.end_stream()
+                logger.info("Ended transcription stream.")
 
         # Instantiate handler and start processing events
         handler = MyEventHandler(stream.output_stream)
         await asyncio.gather(write_chunks(), handler.handle_events())
-    
+
+    except ClientError as e:
+        logger.error(f"ClientError in basic_transcribe: {e}")
+    except Exception as e:
+        logger.error(f"Unexpected error in basic_transcribe: {e}")
     finally:
         # Ensure resources are cleaned up
-        if audio_stream:
+        if 'audio_stream' in locals():
             audio_stream.stop_stream()
             audio_stream.close()
+            logger.info("Audio stream closed.")
         p.terminate()
+        logger.info("PyAudio terminated.")
 
-async def detect_faces():
-    """Detect faces and analyze emotions using Rekognition."""
+async def monitor_audio():
+    global last_audio_time
     while True:
-        # Capture frame-by-frame
-        ret, frame = cap.read()
-        height, width, channels = frame.shape
+        current_time = time.time()
+        if current_time - last_audio_time >= SILENT_SECONDS and current_time - last_audio_time < SILENT_SECONDS2:
+            logger.info("No audio detected for 3 seconds. Exiting.")
+            display_image('./images/thinking1.png', window_name)
+        if current_time - last_audio_time >= SILENT_SECONDS2 and current_time - last_audio_time < SILENT_SECONDS3:
+            logger.info("No audio detected for 5 seconds. Exiting.")
+            display_image('./images/thinking2.png', window_name)
+        if current_time - last_audio_time >= SILENT_SECONDS3:
+            logger.info("No audio detected for 7 seconds. Exiting.")
+            display_image('./images/thinking3.png', window_name)
+            last_audio_time = current_time
+        await asyncio.sleep(1)
 
-        # Convert frame to jpg
-        small = cv2.resize(frame, (int(width * scale_factor), int(height * scale_factor)))
-        ret, buf = cv2.imencode('.jpg', small)
+async def opencv_event_loop():
+    """Handles OpenCV window events."""
+    global last_audio_time
 
-        # Detect faces in jpg
-        faces = rekognition.detect_faces(Image={'Bytes':buf.tobytes()}, Attributes=['ALL'])
-
-        # Draw rectangle around faces
-        for face in faces['FaceDetails']:
-            smile = face['Smile']['Value']
-            cv2.rectangle(frame,
-                        (int(face['BoundingBox']['Left']*width),
-                        int(face['BoundingBox']['Top']*height)),
-                        (int((face['BoundingBox']['Left']+face['BoundingBox']['Width'])*width),
-                        int((face['BoundingBox']['Top']+face['BoundingBox']['Height'])*height)),
-                        green if smile else red, frame_thickness)
-            emotions = face['Emotions']
-            i = 0
-            # 感情によって表示画像を変える
-            firstEmotion = emotions[0]
-            logger.info("Detected emotion: %s", firstEmotion['Type'])
-            if firstEmotion['Type'] == 'HAPPY':
-                display_image('./images/comic-effect4.png', window_name)
-            elif firstEmotion['Type'] == 'SURPRISED':
-                display_image('./images/comic-effect1.png', window_name)
-            elif firstEmotion['Type'] == 'CONFUSED':
-                display_image('./images/comic-effect9.png', window_name)
-            elif firstEmotion['Type'] == 'ANGRY':
-                display_image('./images/comic-effect14.png', window_name)
-            elif firstEmotion['Type'] == 'DISGUSTED':
-                display_image('./images/comic-effect10.png', window_name)
-            elif firstEmotion['Type'] == 'CALM':
-                display_image('./images/comic-effect7.png', window_name)
-            elif firstEmotion['Type'] == 'FEAR':
-                display_image('./images/comic-effect18.png', window_name)
-            elif firstEmotion['Type'] == 'SAD':
-                display_image('./images/comic-effect17.png', window_name)
-            else:
-                display_image('/images/black.png', window_name)
-
-            for emotion in emotions:
-                cv2.putText(frame,
-                            str(emotion['Type']) + ": " + str(emotion['Confidence']),
-                            (25, 40 + (i * 25)),
-                            fontface,
-                            fontscale,
-                            color)
-                i += 1
-
-        # Display the resulting frame
-        cv2.imshow('frame', frame)
+    while True:
+        # Wait for 1 ms and process OpenCV events
         if cv2.waitKey(1) & 0xFF == ord('q'):
+            logger.info("OpenCV window closed by user.")
             break
+        await asyncio.sleep(0.01)  # Yield control to the event loop
 
+async def main():
+    # Display the initial image
+    display_image('./images/black.png', window_name)
+
+    # Run transcription and OpenCV event loop concurrently
+    await asyncio.gather(
+        basic_transcribe(),
+        monitor_audio(),
+        opencv_event_loop()
+    )
 
 if __name__ == "__main__":
-    threads1 = asyncio.create_task(basic_transcribe())
-    threads2 = asyncio.create_task(detect_faces())
-
-    threads2.start()
-    threads1.start()
-    
+    last_audio_time = time.time()
+    try:
+        asyncio.run(main())
+    except KeyboardInterrupt:
+        logger.info("Transcription stopped by user.")
+    except Exception as e:
+        logger.error(f"Unexpected error in main: {e}")
+    finally:
+        cv2.destroyAllWindows()
+        logger.info("OpenCV windows closed.")
