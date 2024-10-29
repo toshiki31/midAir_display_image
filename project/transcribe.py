@@ -21,7 +21,9 @@ REGION = "ap-northeast-1"
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP"
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
-SILENT_SECONDS = 5
+SILENT_SECONDS = 3
+SILENT_SECONDS2 = 5
+SILENT_SECONDS3 = 7
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -80,11 +82,11 @@ class ComprehendDetect:
             logger.info("Detected sentiment: %s", sentiment)
             # 音声の感情分析結果によって画像を変更
             if sentiment == 'POSITIVE':
-                display_image('./images/comic-effect4.png', window_name)
+                display_image('./images/talking_positive.png', window_name)
             elif sentiment == 'NEGATIVE':
-                display_image('./images/comic-effect17.png', window_name)
+                display_image('./images/talking_negative.png', window_name)
             else:
-                display_image('./images/comic-effect19.png', window_name)
+                display_image('./images/talking.png', window_name)
             return sentiment
         except ClientError as error:
             logger.error("Error detecting sentiment: %s", error)
@@ -143,7 +145,7 @@ async def basic_transcribe():
                     # 非同期で読み取り
                     audio_data = await asyncio.to_thread(audio_stream.read, CHUNK_SIZE, exception_on_overflow=False)
                     audio_np = np.frombuffer(audio_data, dtype=np.int16)
-                    if np.abs(audio_np).mean() > 50:
+                    if np.abs(audio_np).mean() > 100:
                         last_audio_time = time.time() # 最後に音声を送信した時間を更新
                     await stream.input_stream.send_audio_event(audio_chunk=audio_data)
             except asyncio.CancelledError:
@@ -175,10 +177,16 @@ async def monitor_audio():
     global last_audio_time
     while True:
         current_time = time.time()
-        if current_time - last_audio_time > SILENT_SECONDS:
+        if current_time - last_audio_time >= SILENT_SECONDS and current_time - last_audio_time < SILENT_SECONDS2:
+            logger.info("No audio detected for 3 seconds. Exiting.")
+            display_image('./images/thinking1.png', window_name)
+        if current_time - last_audio_time >= SILENT_SECONDS2 and current_time - last_audio_time < SILENT_SECONDS3:
             logger.info("No audio detected for 5 seconds. Exiting.")
-            display_image('./images/comic-effect8.png', window_name)
-            last_audio_time = current_time # リセット
+            display_image('./images/thinking2.png', window_name)
+        if current_time - last_audio_time >= SILENT_SECONDS3:
+            logger.info("No audio detected for 7 seconds. Exiting.")
+            display_image('./images/thinking3.png', window_name)
+            last_audio_time = current_time
         await asyncio.sleep(1)
 
 async def opencv_event_loop():
