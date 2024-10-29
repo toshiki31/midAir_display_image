@@ -6,6 +6,7 @@ import os
 import cv2
 import numpy as np
 import screeninfo
+import time
 from botocore.exceptions import ClientError
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
@@ -20,6 +21,7 @@ REGION = "ap-northeast-1"
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP"
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
+SILENT_SECONDS = 5
 
 # Setup logging
 logging.basicConfig(level=logging.INFO)
@@ -134,11 +136,15 @@ async def basic_transcribe():
 
         async def write_chunks():
             """Captures audio and sends it to Transcribe in chunks."""
+            global last_audio_time # 最後に音声を送信した時間をグローバル変数として扱う
+
             try:
                 while True:
                     # 非同期で読み取り
                     audio_data = await asyncio.to_thread(audio_stream.read, CHUNK_SIZE, exception_on_overflow=False)
-                    logger.debug(f"Sending audio chunk of size: {len(audio_data)} bytes")
+                    audio_np = np.frombuffer(audio_data, dtype=np.int16)
+                    if np.abs(audio_np).mean() > 50:
+                        last_audio_time = time.time() # 最後に音声を送信した時間を更新
                     await stream.input_stream.send_audio_event(audio_chunk=audio_data)
             except asyncio.CancelledError:
                 pass
@@ -165,8 +171,20 @@ async def basic_transcribe():
         p.terminate()
         logger.info("PyAudio terminated.")
 
+async def monitor_audio():
+    global last_audio_time
+    while True:
+        current_time = time.time()
+        if current_time - last_audio_time > SILENT_SECONDS:
+            logger.info("No audio detected for 5 seconds. Exiting.")
+            display_image('./images/comic-effect8.png', window_name)
+            last_audio_time = current_time # リセット
+        await asyncio.sleep(1)
+
 async def opencv_event_loop():
     """Handles OpenCV window events."""
+    global last_audio_time
+
     while True:
         # Wait for 1 ms and process OpenCV events
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -181,10 +199,12 @@ async def main():
     # Run transcription and OpenCV event loop concurrently
     await asyncio.gather(
         basic_transcribe(),
+        monitor_audio(),
         opencv_event_loop()
     )
 
 if __name__ == "__main__":
+    last_audio_time = time.time()
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
