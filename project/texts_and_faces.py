@@ -208,6 +208,9 @@ async def monitor_audio():
                 if firstEmotion['Type'] == 'SURPRISED':
                     display_image('./images/comic-effect1.png', window_name)
                     last_audio_time = current_time
+                elif firstEmotion['Type'] == 'HAPPY':
+                    display_image('./images/comic-effect4.png', window_name)
+                    last_audio_time = current_time
                 else:
                     if current_time - last_audio_time >= SILENT_SECONDS and current_time - last_audio_time < SILENT_SECONDS2:
                         display_image('./images/thinking1.png', window_name)
