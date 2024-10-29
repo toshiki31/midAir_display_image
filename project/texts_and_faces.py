@@ -25,6 +25,17 @@ SILENT_SECONDS = 3
 SILENT_SECONDS2 = 5
 SILENT_SECONDS3 = 7
 
+# Detect Faces Configuration
+scale_factor = .15
+cap = cv2.VideoCapture(0)
+session = boto3.Session(profile_name="rekognition")
+rekognition = boto3.client('rekognition')
+
+# 信頼度を書き込むためのフォントの設定
+fontscale = 1.0
+color = (0, 120, 238)
+fontface = cv2.FONT_HERSHEY_DUPLEX
+
 # Setup logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -175,18 +186,36 @@ async def basic_transcribe():
 
 async def monitor_audio():
     global last_audio_time
+    
+
     while True:
         current_time = time.time()
-        if current_time - last_audio_time >= SILENT_SECONDS and current_time - last_audio_time < SILENT_SECONDS2:
-            logger.info("No audio detected for 3 seconds. Exiting.")
-            display_image('./images/thinking1.png', window_name)
-        if current_time - last_audio_time >= SILENT_SECONDS2 and current_time - last_audio_time < SILENT_SECONDS3:
-            logger.info("No audio detected for 5 seconds. Exiting.")
-            display_image('./images/thinking2.png', window_name)
-        if current_time - last_audio_time >= SILENT_SECONDS3:
-            logger.info("No audio detected for 7 seconds. Exiting.")
-            display_image('./images/thinking3.png', window_name)
-            last_audio_time = current_time
+        # Capture frame-by-frame
+        ret, frame = cap.read()
+        height, width, channels = frame.shape
+
+        # Convert frame to jpg
+        small = cv2.resize(frame, (int(width * scale_factor), int(height * scale_factor)))
+        ret, buf = cv2.imencode('.jpg', small)
+        # Detect faces in jpg
+        faces = rekognition.detect_faces(Image={'Bytes':buf.tobytes()}, Attributes=['ALL'])
+        if current_time - last_audio_time > 1:
+            display_image('./images/black.png', window_name)
+            for face in faces['FaceDetails']:
+                emotions = face['Emotions']
+                firstEmotion = emotions[0]
+                logger.info("Detected emotion: %s", firstEmotion['Type'])
+                if firstEmotion['Type'] == 'SURPRISED':
+                    display_image('./images/comic-effect1.png', window_name)
+                    last_audio_time = current_time
+                else:
+                    if current_time - last_audio_time >= SILENT_SECONDS and current_time - last_audio_time < SILENT_SECONDS2:
+                        display_image('./images/thinking1.png', window_name)
+                    if current_time - last_audio_time >= SILENT_SECONDS2 and current_time - last_audio_time < SILENT_SECONDS3:
+                        display_image('./images/thinking2.png', window_name)
+                    if current_time - last_audio_time >= SILENT_SECONDS3:
+                        display_image('./images/thinking3.png', window_name)
+                        last_audio_time = current_time
         await asyncio.sleep(1)
 
 async def opencv_event_loop():
