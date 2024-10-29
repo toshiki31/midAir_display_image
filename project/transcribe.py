@@ -103,9 +103,9 @@ class MyEventHandler(TranscriptResultStreamHandler):
             for alt in result.alternatives:
                 transcript_text = alt.transcript
                 logger.info("Transcription: %s", transcript_text)
-                self.analyze_sentiment(transcript_text)
+                await self.analyze_sentiment(transcript_text)
     
-    def analyze_sentiment(self, text):
+    async def analyze_sentiment(self, text):
         """Performs sentiment analysis on transcribed text."""
         comp_detect.detect_sentiment(text, COMPREHEND_LANGUAGE_CODE)
 
