@@ -43,17 +43,25 @@ logger = logging.getLogger(__name__)
 # 画像表示するモニターの設定
 monitors = screeninfo.get_monitors()
 num_monitors = len(monitors)
+logger.info(f"monitors: {monitors}")
+logger.info(f"Number of monitors: {num_monitors}")
 if num_monitors < 2:
     monitor = monitors[0]
 else:
     monitor = monitors[1]
-screen_x = monitor.x
-screen_y = monitor.y
+logger.info(f"monitor: {monitor}")
+screen_width = monitor.width
+screen_height = monitor.height
 window_name = 'Image'
 # OpenCVのウィンドウを作成
-cv2.namedWindow(window_name)
-cv2.moveWindow(window_name, screen_x, screen_y)
-cv2.imshow(window_name, 255 * np.ones((100, 300), dtype=np.uint8))  # 初期の空白画像を表示
+cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+# ウィンドウの位置をモニターの左上に設定
+cv2.moveWindow(window_name, monitor.x, monitor.y)
+# 初期の空白画像を表示
+cv2.imshow(window_name, 255 * np.ones((screen_height, screen_width), dtype=np.uint8))
+# ウィンドウをフルスクリーンにする
+cv2.setWindowProperty(window_name, cv2.WND_PROP_FULLSCREEN, cv2.WINDOW_FULLSCREEN)
+
 logger.info("Displaying initial image.")
 
 def display_image(image_path, window_name):
