@@ -19,12 +19,7 @@ def display_image(image_path, window_name):
     if image is None:
         print(f"Error: Unable to load image at {abs_path}")
         return
-    
-    # 16:10アスペクト比にリサイズ
-    height, width = image.shape[:2]
-    new_width = 3840
-    new_height = int(new_width * 10 / 16)
-    resized_image = cv2.resize(image, (new_width, new_height))
+    resized_image = cv2.resize(image, (WINDOW_WIDTH, WINDOW_HEIGHT))
 
     # 画像をウィンドウに表示
     cv2.imshow(window_name, resized_image)
@@ -44,7 +39,8 @@ def read_gif(gifList):
 
 def show_gif(gif, window_name):
     for t in range(len(gif)):
-        cv2.imshow(window_name, gif[t])
+        resized_frame = cv2.resize(gif[t], (WINDOW_WIDTH, WINDOW_HEIGHT))
+        cv2.imshow(window_name, resized_frame)
         cv2.waitKey(10)
 
 # Setup
@@ -55,6 +51,8 @@ frame_thickness = 2
 cap = cv2.VideoCapture(0)
 session = boto3.Session(profile_name="rekognition")
 rekognition = boto3.client('rekognition')
+WINDOW_WIDTH = 3840
+WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
 
 HAPPY_ANIMATION = ["./animations/happy_animation.gif", 4]
 SURPRISED_ANIMATION = ["./animations/surprised_animation.gif", 24]
