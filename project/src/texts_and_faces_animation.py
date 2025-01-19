@@ -53,8 +53,8 @@ IMAGE_THINK3 = "./images/thinking3.png"
 # gifパス
 HAPPY_ANIMATION = "./animations/happy_animation.gif"
 SURPRISED_ANIMATION = "./animations/surprised_animation.gif"
-
-
+TALKING_ANIMATION = "./animations/talking_animation.gif"
+# todo: taking positive, negativeも作る
 
 
 # ===============================
@@ -136,16 +136,12 @@ class ImageWindowManager:
             frames.append(frame_array)
         return np.array(frames)
 
-    def show_gif(self, gif_frames):
+    def show_gif(self, gif_frames, interval:int):
         """GIFの各フレームを表示"""
-        if len(gif_frames) >= 10:
-            waitKeyNum = 5
-        else:
-            waitKeyNum = 100
         for t in range(len(gif_frames)):
             resized_frame = cv2.resize(gif_frames[t], (WINDOW_WIDTH, WINDOW_HEIGHT))
             cv2.imshow(self.window_name, resized_frame)
-            cv2.waitKey(waitKeyNum)
+            cv2.waitKey(interval)
 
 
     async def event_loop(self):
@@ -187,7 +183,8 @@ class ComprehendDetect:
             elif sentiment == 'NEGATIVE':
                 self.window_manager.display_image(IMAGE_TALKING_NEGATIVE)
             else:
-                self.window_manager.display_image(IMAGE_TALKING)
+                talking_gif = self.window_manager.read_gif(TALKING_ANIMATION)
+                self.window_manager.show_gif(talking_gif, 100)
             return sentiment
         except ClientError as error:
             logger.error("Error detecting sentiment: %s", error)
@@ -335,11 +332,11 @@ class FaceMonitor:
 
                     if emotion_type == 'SURPRISED':
                         surprised_gif = self.window_manager.read_gif(SURPRISED_ANIMATION)
-                        self.window_manager.show_gif(surprised_gif)
+                        self.window_manager.show_gif(surprised_gif, 5)
                         state.last_audio_time = current_time
                     elif emotion_type == 'HAPPY':
                         happy_gif = self.window_manager.read_gif(HAPPY_ANIMATION)
-                        self.window_manager.show_gif(happy_gif)
+                        self.window_manager.show_gif(happy_gif, 100)
                         state.last_audio_time = current_time
                     else:
                         # サイレント判定による画像切り替え
