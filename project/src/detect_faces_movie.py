@@ -48,7 +48,7 @@ def play_video_in_main(movie, window_name):
     """
     動画をメインスレッドで再生する関数。
     """
-    cap = cv2.VideoCapture(movie)
+    cap = cv2.VideoCapture(movie, cv2.CAP_FFMPEG) # FFMPEGを利用
     if not cap.isOpened():
         print(f"Error: Cannot open video {movie}")
         return
@@ -62,7 +62,7 @@ def play_video_in_main(movie, window_name):
         cv2.imshow(window_name, img)
 
         # OpenCV のイベント処理を確保
-        if cv2.waitKey(5) & 0xFF == ord('q'):
+        if cv2.waitKey(16) & 0xFF == ord('q'):
             break
 
     cap.release()
