@@ -12,6 +12,12 @@ source [venvname]/bin/activate
 ([venvname])$ pip install [package name]
 ```
 
+**requirements.txt に書き出し**
+
+```bash
+pip freeze > requirements.txt
+```
+
 **Deactivate**
 
 ```bash
@@ -40,15 +46,20 @@ https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
 ```
 .
 ├── project/
-│   ├── .venv/                   // 仮想環境
-│   ├── images/                  // 表示する写真
+│   ├── .venv/                              // 仮想環境
+│   ├── images/                             // 表示する写真
 │   ├── src/
-│   │   ├── detect_faces.txt     // 表情認識で分析された感情を漫符として表示
-│   │   ├── sample.py            // 特定のキーボード押下でそれに対応した漫符を表示
-│   │   ├── subtitle.py          // キーボードで入力した内容を漫符で表示した吹き出しの中に表示
-│   │   ├── texts_amd_faces.py   // テキスト＋表情で感情分析した結果を漫符に表示
-│   │   └── transcribe.py        // テキスト認識で分析された感情を漫符として表示
-│   └── requirements.txt        // 仮想環境に必要なライブラリ管理
+│   │   ├── detect_faces_gif.py             // 表情認識で分析された感情を漫符として表示（gif画像）
+│   │   ├── detect_faces_movie_pyqt.py      // 表情認識で分析された感情を漫符として表示（動画・PyQt使用）
+│   │   ├── detect_faces_movie.py           // 表情認識で分析された感情を漫符として表示（動画）
+│   │   ├── detect_faces.py                 // 表情認識で分析された感情を漫符として表示（png画像）
+│   │   ├── sample.py                       // 特定のキーボード押下でそれに対応した漫符を表示
+│   │   ├── subtitle.py                     // キーボードで入力した内容を漫符で表示した吹き出しの中に表示
+│   │   ├── texts_amd_faces_gif.py          // テキスト＋表情で感情分析した結果を漫符に表示（gif画像）
+│   │   ├── texts_amd_faces_movie.py        // テキスト＋表情で感情分析した結果を漫符に表示（動画・PyQt使用）
+│   │   ├── texts_amd_faces.py              // テキスト＋表情で感情分析した結果を漫符に表示
+│   │   └── transcribe.py                   // テキスト認識で分析された感情を漫符として表示
+│   └── requirements.txt                    // 仮想環境に必要なライブラリ管理
 ├── .gitignore
 └── README.md
 ```
