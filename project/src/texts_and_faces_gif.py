@@ -51,9 +51,9 @@ IMAGE_THINK3 = "./images/thinking3.png"
 
 
 # gifパス
-HAPPY_ANIMATION = "./animations/happy_animation.gif"
-SURPRISED_ANIMATION = "./animations/surprised_animation.gif"
-TALKING_ANIMATION = "./animations/talking_animation.gif"
+HAPPY_ANIMATION = "./gifs/happy_animation.gif"
+SURPRISED_ANIMATION = "./gifs/surprised_animation.gif"
+TALKING_ANIMATION = "./gifs/talking_animation.gif"
 # todo: taking positive, negativeも作る
 
 

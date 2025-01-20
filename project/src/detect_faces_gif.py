@@ -54,8 +54,8 @@ rekognition = boto3.client('rekognition')
 WINDOW_WIDTH = 3840
 WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
 
-HAPPY_ANIMATION = ["./animations/happy_animation.gif", 4]
-SURPRISED_ANIMATION = ["./animations/surprised_animation.gif", 24]
+HAPPY_ANIMATION = ["./gifs/happy_animation.gif", 4]
+SURPRISED_ANIMATION = ["./gifs/surprised_animation.gif", 24]
 happy_gif = read_gif(HAPPY_ANIMATION)
 surprised_gif = read_gif(SURPRISED_ANIMATION)
 
