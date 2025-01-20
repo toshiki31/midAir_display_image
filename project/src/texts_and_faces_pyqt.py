@@ -110,8 +110,8 @@ class VideoThread(QThread):
             ret, frame = cap.read()
             if not ret:
                 break
-            frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT))
-            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # カラー変換を先に実行
+            frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT), interpolation=cv2.INTER_LINEAR)  # 高速な補間方法を選択
             self.frame_ready.emit(frame)
             self.msleep(16)  # 60FPS相当
 
@@ -298,6 +298,7 @@ class EmotionApp(QWidget):
             emotions = face.get('Emotions', [])
             if emotions:
                 primary_emotion = emotions[0]['Type']
+                logger.info(f"Detected emotion: {primary_emotion}")
                 if primary_emotion == 'HAPPY' and not self.video_thread.isRunning():
                     self.video_thread.start_video(HAPPY_MOVIE)
                 elif primary_emotion == 'SURPRISED' and not self.video_thread.isRunning():
