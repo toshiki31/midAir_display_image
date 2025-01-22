@@ -26,9 +26,10 @@ WINDOW_WIDTH = 2400
 WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
 
 # パス設定
-IMAGE_TALKING = "./images/talking.png"
-IMAGE_TALKING_POSITIVE = "./images/talking_positive.png"
-IMAGE_TALKING_NEGATIVE = "./images/talking_negative.png"
+IMAGE_BLACK = "./images/black.png"
+IMAGE_THINKING1 = "./images/thinking1.png"
+IMAGE_THINKING2 = "./images/thinking2.png"
+IMAGE_THINKING3 = "./images/thinking3.png"
 HAPPY_MOVIE = "./movies/happy_movie.mp4"
 SURPRISED_MOVIE = "./movies/surprised_movie.mp4"
 TALKING_MOVIE = "./movies/talking_movie.mp4"
@@ -228,6 +229,11 @@ class EmotionApp(QWidget):
         super().__init__()
         self.setWindowTitle("Emotion Analysis")
         self.setGeometry(100, 100, 800, 600)
+        self.last_audio_time = time.time()  # 初期化
+        self.SILENT_SECONDS = 3
+        self.SILENT_SECONDS2 = 5
+        self.SILENT_SECONDS3 = 7
+        self.SILENT_SECONDS4 = 9
 
         self.camera_label = QLabel(self)
         self.camera_label.setFixedSize(640, 480)
@@ -266,6 +272,9 @@ class EmotionApp(QWidget):
         # 表情認識のタイマー状態
         self.is_camera_active = False
 
+        # 起動時に黒画面を初期表示
+        self.display_image(IMAGE_BLACK)
+
     def reset_audio_timer(self):
         """音声が検出されたときにタイマーをリセット"""
         self.audio_timer.start()
@@ -285,24 +294,76 @@ class EmotionApp(QWidget):
         if not ret:
             return
 
+        current_time = time.time()
+        silence_duration = current_time - self.last_audio_time
+
+        # カメラの画像を取得して顔認識を実行
         small_frame = cv2.resize(frame, (320, 240))
         _, buf = cv2.imencode('.jpg', small_frame)
         response = rekognition.detect_faces(Image={'Bytes': buf.tobytes()}, Attributes=['ALL'])
 
+        # カメラ画像の更新
         frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         h, w, ch = frame.shape
         qimg = QImage(frame.data, w, h, ch * w, QImage.Format_RGB888)
         self.camera_label.setPixmap(QPixmap.fromImage(qimg))
 
+        # Rekognition で顔が検出されない場合の処理
+        if not response.get('FaceDetails'):
+            logger.info("No faces detected, keeping the current state.")
+            return
+
         for face in response.get('FaceDetails', []):
             emotions = face.get('Emotions', [])
-            if emotions:
-                primary_emotion = emotions[0]['Type']
-                logger.info(f"Detected emotion: {primary_emotion}")
-                if primary_emotion == 'HAPPY' and not self.video_thread.isRunning():
-                    self.video_thread.start_video(HAPPY_MOVIE)
-                elif primary_emotion == 'SURPRISED' and not self.video_thread.isRunning():
-                    self.video_thread.start_video(SURPRISED_MOVIE)
+            if not emotions:
+                # 表情が検出されない場合はログに記録し、直前の状態を維持
+                logger.info("No emotions detected, keeping the current state.")
+                return
+
+            first_emotion = emotions[0]
+            emotion_type = first_emotion['Type']
+            logger.info(f"Detected emotion: {emotion_type}")
+
+            if emotion_type == 'HAPPY' and not self.video_thread.isRunning():
+                self.video_thread.start_video(HAPPY_MOVIE)
+                self.last_audio_time = current_time
+            elif emotion_type == 'SURPRISED' and not self.video_thread.isRunning():
+                self.video_thread.start_video(SURPRISED_MOVIE)
+                self.last_audio_time = current_time
+            else:
+                # 喋っていない秒数に応じて THINKING 画像を切り替え
+                if self.SILENT_SECONDS <= silence_duration < self.SILENT_SECONDS2:
+                    self.display_image(IMAGE_THINKING1)
+                elif self.SILENT_SECONDS2 <= silence_duration < self.SILENT_SECONDS3:
+                    self.display_image(IMAGE_THINKING2)
+                elif self.SILENT_SECONDS3 <= silence_duration < self.SILENT_SECONDS4:
+                    self.display_image(IMAGE_THINKING3)
+                elif  silence_duration >= self.SILENT_SECONDS4:
+                    self.display_image(IMAGE_BLACK)  # 黒画面を表示
+                    self.last_audio_time = current_time
+
+    
+    def display_image(self, image_path: str):
+        """画像を読み込み、16:10にリサイズして表示"""
+        import os
+
+        abs_path = os.path.abspath(image_path)
+        if not os.path.exists(abs_path):
+            logger.error(f"Error: The path {abs_path} does not exist.")
+            return
+
+        image = cv2.imread(abs_path)
+        if image is None:
+            logger.error(f"Error: Unable to load image at {abs_path}")
+            return
+
+        resized_image = cv2.resize(image, (WINDOW_WIDTH, WINDOW_HEIGHT))
+        
+        # PyQt ウィジェットに表示
+        h, w, ch = resized_image.shape
+        qimg = QImage(resized_image.data, w, h, ch * w, QImage.Format_BGR888)
+        pixmap = QPixmap.fromImage(qimg)
+        self.video_window.video_label.setPixmap(pixmap)
 
     def clear_video(self):
         """動画再生終了後に表示をクリア"""
