@@ -63,3 +63,9 @@ https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
 ├── .gitignore
 └── README.md
 ```
+
+## デモ時
+
+**音声ミュート（表情認識のみさせる場合）**
+
+システム設定アプリ > サウンド > 「出力と入力」でマイクの入力音量を最小にする
