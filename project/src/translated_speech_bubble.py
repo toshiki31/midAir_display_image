@@ -11,6 +11,7 @@ from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
 from PIL import Image, ImageTk
 import tkinter as tk
+import tkinter.font as tkfont
 import screeninfo
 import threading
 
@@ -138,18 +139,15 @@ class SpeechBubble:
         吹き出し表示用の別ウィンドウを作成し、背景画像とテキスト表示領域を初期化する。
         このインスタンスは必ずメインスレッドで生成してください。
         """
-        # メインウィンドウは非表示にしておく
         self.root = tk.Tk()
         self.root.withdraw()  # メインウィンドウを隠す
 
-        # 吹き出しウィンドウ（ポップアップ）の作成
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Speech Bubble")
         self.popup.attributes("-topmost", True)  # 常に最前面に表示
         self.popup.update_idletasks()
         self.popup.update()
 
-        # スクリーン情報の取得（複数モニター対応）
         monitors = screeninfo.get_monitors()
         if len(monitors) > 1:
             second_monitor = monitors[1]
@@ -163,33 +161,47 @@ class SpeechBubble:
             monitor_x = 0
             monitor_y = 0
 
-        # 16:10 のアスペクト比を考慮したウィンドウサイズの計算
         aspect_ratio = 16 / 10
         popup_width = int(monitor_height * aspect_ratio)
         popup_height = monitor_height
         self.popup.geometry(f"{popup_width}x{popup_height}+{monitor_x}+{monitor_y}")
 
-        # 背景画像（吹き出し画像）の読み込みとリサイズ
         self.bg_image = Image.open("images/fukidashi.png")
         self.bg_image = self.bg_image.resize((popup_width, 200), Image.Resampling.LANCZOS)
         self.photo = ImageTk.PhotoImage(self.bg_image)
 
-        # Canvas を作成して背景画像を表示
         self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height)
         self.canvas.pack()
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        # Canvas にテキストを表示するための領域を作成
+        # 表示領域の幅（余白を持たせる）
+        self.text_width_limit = popup_width - 100
+        
+        # 自動折り返し用として width を指定（今回は利用しません）
         self.text_id = self.canvas.create_text(popup_width / 2, 80,
                                                 text="",
                                                 font=("Arial", 100, "bold"),
-                                                fill="black")
-        
+                                                fill="black",
+                                                width=self.text_width_limit)
+        # フォント測定用の Font オブジェクトを作成
+        self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
+
     def update_text(self, text):
         """
         吹き出し内に表示するテキストを更新する。
+        テキスト全体の幅が指定幅を超える場合、右側の部分（最新部分）のみ表示する。
         """
-        self.canvas.itemconfig(self.text_id, text=text)
+        if self.text_font.measure(text) <= self.text_width_limit:
+            display_text = text
+        else:
+            # 文字列の先頭から順に、右側部分が指定幅以下になる最小の位置を探す
+            display_text = text  # 念のため初期値として全体を設定
+            for i in range(len(text)):
+                substring = text[i:]
+                if self.text_font.measure(substring) <= self.text_width_limit:
+                    display_text = substring
+                    break
+        self.canvas.itemconfig(self.text_id, text=display_text)
         self.root.update_idletasks()
 
     def show(self):
@@ -205,7 +217,6 @@ class SpeechBubble:
         """
         self.popup.withdraw()
         self.root.update()
-
 
 # ===============================
 #   メインアプリケーション (Tkinter版)
