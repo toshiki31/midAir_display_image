@@ -20,11 +20,14 @@ import threading
 # ===============================
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024
-TRANSCRIPT_LANGUAGE_CODE = "ja-JP"
+# 初期値（後でユーザー選択により上書き） 
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
 WINDOW_WIDTH = 2500
 WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
+TRANSCRIPT_LANGUAGE_CODE = "ja-JP" 
+TARGET_LANGUAGE_CODE = "en-US"  # 初期値
+REGION = "ap-northeast-1"
 
 # パス設定（必要に応じて使用）
 IMAGE_BLACK = "./images/black.png"
@@ -36,25 +39,55 @@ SURPRISED_MOVIE = "./movies/surprised_movie.mp4"
 TALKING_MOVIE = "./movies/talking_movie.mp4"
 TALKING_POSITIVE_MOVIE = "./movies/talking_positive_movie.mp4"
 TALKING_NEGATIVE_MOVIE = "./movies/talking_negative_movie.mp4"
+SPEECH_BUBBLE = "images/fukidashi.png"
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Rekognition & Comprehend クライアント（本コードでは直接使用していませんが、必要に応じて削除可）
-rekognition = boto3.client("rekognition", region_name="ap-northeast-1")
-comprehend = boto3.client("comprehend", region_name="ap-northeast-1")
+# Rekognition & Comprehend クライアント（不要なら削除可）
+rekognition = boto3.client("rekognition", region_name=REGION)
+comprehend = boto3.client("comprehend", region_name=REGION)
+
+
+# ===============================
+#   言語選択ダイアログ
+# ===============================
+def get_language_settings():
+    lang_root = tk.Tk()
+    lang_root.withdraw()
+    dialog = tk.Toplevel(lang_root)
+    dialog.title("言語設定")
+    tk.Label(dialog, text="翻訳元言語:").grid(row=0, column=0, padx=10, pady=10)
+    tk.Label(dialog, text="翻訳先言語:").grid(row=1, column=0, padx=10, pady=10)
+    
+    languages = ["ja-JP", "en-US", "fr-FR", "de-DE", "es-ES"]
+    source_var = tk.StringVar(value=languages[0])
+    target_var = tk.StringVar(value=languages[1])
+    tk.OptionMenu(dialog, source_var, *languages).grid(row=0, column=1, padx=10, pady=10)
+    tk.OptionMenu(dialog, target_var, *languages).grid(row=1, column=1, padx=10, pady=10)
+    
+    result = {}
+    def on_ok():
+        result['source'] = source_var.get()
+        result['target'] = target_var.get()
+        dialog.destroy()
+    tk.Button(dialog, text="OK", command=on_ok).grid(row=2, column=0, columnspan=2, pady=10)
+    dialog.grab_set()
+    lang_root.wait_window(dialog)
+    lang_root.destroy()
+    return result['source'], result['target']
 
 
 # ===============================
 #   音声認識スレッド (Tkinter版)
 # ===============================
 class AudioTranscriptionThread(threading.Thread):
-    """音声認識スレッド（Tkinter用：PyQt部分を除去）"""
+    """音声認識スレッド（Tkinter用）"""
     def __init__(self, speech_bubble):
         super().__init__()
         self.speech_bubble = speech_bubble
-        self.loop = None  # asyncio のループを保持
+        self.loop = None
 
     def run(self):
         self.loop = asyncio.new_event_loop()
@@ -63,7 +96,7 @@ class AudioTranscriptionThread(threading.Thread):
 
     async def transcribe_stream(self):
         try:
-            client = TranscribeStreamingClient(region="ap-northeast-1")
+            client = TranscribeStreamingClient(region=REGION)
             stream = await client.start_stream_transcription(
                 language_code=TRANSCRIPT_LANGUAGE_CODE,
                 media_sample_rate_hz=SAMPLE_RATE,
@@ -90,7 +123,6 @@ class AudioTranscriptionThread(threading.Thread):
                             logger.error(f"Audio read error: {e}")
                             continue
                         audio_np = np.frombuffer(data, dtype=np.int16)
-                        # しきい値以上の音量ならログ出力（ここではシグナルの代わり）
                         if np.abs(audio_np).mean() > 100:
                             logger.info("Audio detected!")
                         await stream.input_stream.send_audio_event(audio_chunk=data)
@@ -99,13 +131,11 @@ class AudioTranscriptionThread(threading.Thread):
                 finally:
                     await stream.input_stream.end_stream()
 
-            # MyEventHandler にメインスレッドで生成した SpeechBubble を渡す
             handler = MyEventHandler(stream.output_stream, self.speech_bubble)
             await asyncio.gather(write_chunks(), handler.handle_events())
 
         except Exception as e:
             logger.error(f"Error in transcribe_stream: {e}")
-
         finally:
             audio_stream.stop_stream()
             audio_stream.close()
@@ -113,21 +143,32 @@ class AudioTranscriptionThread(threading.Thread):
 
 
 # ===============================
-#   音声認識 -> 吹き出し表示
+#   音声認識 -> 翻訳 -> 吹き出し表示
 # ===============================
 class MyEventHandler(TranscriptResultStreamHandler):
     def __init__(self, output_stream, speech_bubble):
         super().__init__(output_stream)
         self.speech_bubble = speech_bubble
 
+    def translate_text(self, text):
+        translate = boto3.client("translate", region_name=REGION, use_ssl=True)
+        result = translate.translate_text(
+            Text=text,
+            SourceLanguageCode=TRANSCRIPT_LANGUAGE_CODE,
+            TargetLanguageCode=TARGET_LANGUAGE_CODE
+        )
+        return result.get("TranslatedText", text)
+
     async def handle_transcript_event(self, transcript_event: TranscriptEvent):
         results = transcript_event.transcript.results
         for result in results:
             for alt in result.alternatives:
                 transcript = alt.transcript
-                logger.info(f"Transcription: {transcript}")  # 文字起こし結果をログ出力
-                # メインスレッドで SpeechBubble の update_text を実行する
-                self.speech_bubble.root.after(0, self.speech_bubble.update_text, transcript)
+                logger.info(f"Transcription: {transcript}")
+                # 翻訳処理をブロッキング処理として非同期に実行
+                translated = await asyncio.to_thread(self.translate_text, transcript)
+                logger.info(f"Translated: {translated}")
+                self.speech_bubble.root.after(0, self.speech_bubble.update_text, translated)
 
 
 # ===============================
@@ -144,7 +185,7 @@ class SpeechBubble:
 
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Speech Bubble")
-        self.popup.attributes("-topmost", True)  # 常に最前面に表示
+        self.popup.attributes("-topmost", True)
         self.popup.update_idletasks()
         self.popup.update()
 
@@ -166,7 +207,7 @@ class SpeechBubble:
         popup_height = monitor_height
         self.popup.geometry(f"{popup_width}x{popup_height}+{monitor_x}+{monitor_y}")
 
-        self.bg_image = Image.open("images/fukidashi.png")
+        self.bg_image = Image.open(SPEECH_BUBBLE)
         self.bg_image = self.bg_image.resize((popup_width, 200), Image.Resampling.LANCZOS)
         self.photo = ImageTk.PhotoImage(self.bg_image)
 
@@ -174,28 +215,24 @@ class SpeechBubble:
         self.canvas.pack()
         self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        # 表示領域の幅（余白を持たせる）
         self.text_width_limit = popup_width - 100
-        
-        # 自動折り返し用として width を指定（今回は利用しません）
+        # create_text に width を指定してテキスト自動折り返しを有効化
         self.text_id = self.canvas.create_text(popup_width / 2, 80,
                                                 text="",
                                                 font=("Arial", 100, "bold"),
                                                 fill="black",
                                                 width=self.text_width_limit)
-        # フォント測定用の Font オブジェクトを作成
         self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
 
     def update_text(self, text):
         """
         吹き出し内に表示するテキストを更新する。
-        テキスト全体の幅が指定幅を超える場合、右側の部分（最新部分）のみ表示する。
+        もしテキスト全体の幅が指定幅を超える場合、右側（最新）の部分のみ表示する。
         """
         if self.text_font.measure(text) <= self.text_width_limit:
             display_text = text
         else:
-            # 文字列の先頭から順に、右側部分が指定幅以下になる最小の位置を探す
-            display_text = text  # 念のため初期値として全体を設定
+            display_text = text
             for i in range(len(text)):
                 substring = text[i:]
                 if self.text_font.measure(substring) <= self.text_width_limit:
@@ -205,33 +242,31 @@ class SpeechBubble:
         self.root.update_idletasks()
 
     def show(self):
-        """
-        吹き出しウィンドウを表示する。
-        """
         self.popup.deiconify()
         self.root.update()
 
     def hide(self):
-        """
-        吹き出しウィンドウを非表示にする。
-        """
         self.popup.withdraw()
         self.root.update()
+
 
 # ===============================
 #   メインアプリケーション (Tkinter版)
 # ===============================
 def main():
-    # SpeechBubble はメインスレッドで生成
+    source_lang, target_lang = get_language_settings()
+    global TRANSCRIPT_LANGUAGE_CODE, TARGET_LANGUAGE_CODE
+    TRANSCRIPT_LANGUAGE_CODE = source_lang
+    TARGET_LANGUAGE_CODE = target_lang
+    logger.info(f"Selected source language: {source_lang}, target language: {target_lang}")
+
     speech_bubble = SpeechBubble()
     speech_bubble.show()
 
-    # 音声認識スレッドを開始
     audio_thread = AudioTranscriptionThread(speech_bubble)
     audio_thread.daemon = True
     audio_thread.start()
 
-    # Tkinter のメインループを開始
     speech_bubble.root.mainloop()
 
 
