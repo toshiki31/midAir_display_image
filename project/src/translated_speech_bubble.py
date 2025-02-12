@@ -27,7 +27,9 @@ WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP" # 初期値
 TARGET_LANGUAGE_CODE = "en-US"  # 初期値
 REGION = "ap-northeast-1"
-SPEECH_BUBBLE = "./images/fukidashi.png"
+SPEECH_BUBBLE1 = "./images/speech-bubble1.png"
+SPEECH_BUBBLE2 = "./images/speech-bubble2.png"
+SPEECH_BUBBLE3 = "./images/speech-bubble3.png"
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
@@ -163,17 +165,21 @@ class SpeechBubble:
     def __init__(self):
         """
         吹き出し表示用の別ウィンドウを作成し、背景画像とテキスト表示領域を初期化する。
-        ※このインスタンスは必ずメインスレッドで生成してください。
+        背景画像はウィンドウ全体の横幅に合わせ、元画像のアスペクト比を維持して自動で高さを決定する。
+        このインスタンスは必ずメインスレッドで生成してください。
         """
+        # メインウィンドウ（非表示）を生成
         self.root = tk.Tk()
-        self.root.withdraw()  # メインウィンドウは非表示
+        self.root.withdraw()
 
+        # ポップアップウィンドウの生成
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Speech Bubble")
         self.popup.attributes("-topmost", True)
         self.popup.update_idletasks()
         self.popup.update()
 
+        # スクリーン情報の取得（複数モニターがある場合は2番目のモニターを使用）
         monitors = screeninfo.get_monitors()
         if len(monitors) > 1:
             second_monitor = monitors[1]
@@ -187,40 +193,41 @@ class SpeechBubble:
             monitor_x = 0
             monitor_y = 0
 
+        # ウィンドウの横幅を、モニターの高さとアスペクト比16:10から計算
         aspect_ratio = 16 / 10
         popup_width = int(monitor_height * aspect_ratio)
         popup_height = monitor_height
         self.popup.geometry(f"{popup_width}x{popup_height}+{monitor_x}+{monitor_y}")
 
-        # 保存用ウィンドウサイズ
+        # 保存用にウィンドウサイズを保持
         self.popup_width = popup_width
         self.popup_height = popup_height
 
-        # 初期背景は吹き出し画像
-        self.current_background = "fukidashi"
-        self.last_transcript_time = time.time()
-
-        self.bg_image = Image.open(SPEECH_BUBBLE)
-        self.bg_image = self.bg_image.resize((popup_width, 200), Image.Resampling.LANCZOS)
+        # 背景画像の読み込み
+        bg_image_path = SPEECH_BUBBLE1
+        self.bg_image_orig = Image.open(bg_image_path)
+        # 元画像サイズを取得
+        orig_width, orig_height = self.bg_image_orig.size
+        # ウィンドウ横幅に合わせた新しいサイズを計算（高さはアスペクト比に従う）
+        new_width = popup_width
+        new_height = int(orig_height * new_width / orig_width)
+        self.bg_image = self.bg_image_orig.resize((new_width, new_height), Image.Resampling.LANCZOS)
         self.photo = ImageTk.PhotoImage(self.bg_image)
 
+        # Canvas を作成し、背景画像を配置
         self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height)
         self.canvas.pack()
-        # 背景画像アイテムIDを保持
         self.bg_image_id = self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        self.text_width_limit = popup_width - 200
-        # create_text で width を指定して自動折り返しも可能だが、
-        # ここでは後で文字全体の中から右側のみ抽出するので利用は任意
-        self.text_id = self.canvas.create_text(popup_width / 2, 80,
+        # テキスト表示領域の幅（余白を取る）
+        self.text_width_limit = popup_width - 100
+        # create_text の width は自動折り返し用ですが、ここでは表示する部分を独自に抽出するので参考値です
+        self.text_id = self.canvas.create_text(popup_width / 2, new_height // 2,
                                                 text="",
                                                 font=("Arial", 100, "bold"),
                                                 fill="black",
                                                 width=self.text_width_limit)
         self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
-
-        # 定期的に発話がないか確認（500msごと）
-        self.root.after(500, self.poll_silence)
 
     def poll_silence(self):
         """
