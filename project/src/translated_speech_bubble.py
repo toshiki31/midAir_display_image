@@ -20,34 +20,18 @@ import threading
 # ===============================
 SAMPLE_RATE = 16000
 CHUNK_SIZE = 1024
-# 初期値（後でユーザー選択により上書き） 
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
 WINDOW_WIDTH = 2500
 WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
-TRANSCRIPT_LANGUAGE_CODE = "ja-JP" 
+TRANSCRIPT_LANGUAGE_CODE = "ja-JP" # 初期値
 TARGET_LANGUAGE_CODE = "en-US"  # 初期値
 REGION = "ap-northeast-1"
-
-# パス設定（必要に応じて使用）
-IMAGE_BLACK = "./images/black.png"
-IMAGE_THINKING1 = "./images/thinking1.png"
-IMAGE_THINKING2 = "./images/thinking2.png"
-IMAGE_THINKING3 = "./images/thinking3.png"
-HAPPY_MOVIE = "./movies/happy_movie.mp4"
-SURPRISED_MOVIE = "./movies/surprised_movie.mp4"
-TALKING_MOVIE = "./movies/talking_movie.mp4"
-TALKING_POSITIVE_MOVIE = "./movies/talking_positive_movie.mp4"
-TALKING_NEGATIVE_MOVIE = "./movies/talking_negative_movie.mp4"
-SPEECH_BUBBLE = "images/fukidashi.png"
+SPEECH_BUBBLE = "./images/fukidashi.png"
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-
-# Rekognition & Comprehend クライアント（不要なら削除可）
-rekognition = boto3.client("rekognition", region_name=REGION)
-comprehend = boto3.client("comprehend", region_name=REGION)
 
 
 # ===============================
@@ -165,9 +149,10 @@ class MyEventHandler(TranscriptResultStreamHandler):
             for alt in result.alternatives:
                 transcript = alt.transcript
                 logger.info(f"Transcription: {transcript}")
-                # 翻訳処理をブロッキング処理として非同期に実行
+                # 翻訳を非同期で実行
                 translated = await asyncio.to_thread(self.translate_text, transcript)
                 logger.info(f"Translated: {translated}")
+                # 受信時刻を更新し、翻訳結果を表示
                 self.speech_bubble.root.after(0, self.speech_bubble.update_text, translated)
 
 
@@ -178,10 +163,10 @@ class SpeechBubble:
     def __init__(self):
         """
         吹き出し表示用の別ウィンドウを作成し、背景画像とテキスト表示領域を初期化する。
-        このインスタンスは必ずメインスレッドで生成してください。
+        ※このインスタンスは必ずメインスレッドで生成してください。
         """
         self.root = tk.Tk()
-        self.root.withdraw()  # メインウィンドウを隠す
+        self.root.withdraw()  # メインウィンドウは非表示
 
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Speech Bubble")
@@ -207,16 +192,26 @@ class SpeechBubble:
         popup_height = monitor_height
         self.popup.geometry(f"{popup_width}x{popup_height}+{monitor_x}+{monitor_y}")
 
+        # 保存用ウィンドウサイズ
+        self.popup_width = popup_width
+        self.popup_height = popup_height
+
+        # 初期背景は吹き出し画像
+        self.current_background = "fukidashi"
+        self.last_transcript_time = time.time()
+
         self.bg_image = Image.open(SPEECH_BUBBLE)
         self.bg_image = self.bg_image.resize((popup_width, 200), Image.Resampling.LANCZOS)
         self.photo = ImageTk.PhotoImage(self.bg_image)
 
         self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height)
         self.canvas.pack()
-        self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
+        # 背景画像アイテムIDを保持
+        self.bg_image_id = self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
 
-        self.text_width_limit = popup_width - 100
-        # create_text に width を指定してテキスト自動折り返しを有効化
+        self.text_width_limit = popup_width - 200
+        # create_text で width を指定して自動折り返しも可能だが、
+        # ここでは後で文字全体の中から右側のみ抽出するので利用は任意
         self.text_id = self.canvas.create_text(popup_width / 2, 80,
                                                 text="",
                                                 font=("Arial", 100, "bold"),
@@ -224,11 +219,33 @@ class SpeechBubble:
                                                 width=self.text_width_limit)
         self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
 
+        # 定期的に発話がないか確認（500msごと）
+        self.root.after(500, self.poll_silence)
+
+    def poll_silence(self):
+        """
+        発話が2秒以上ない場合は、背景画像と字幕を非表示にする。
+        発話がある場合は表示状態を "normal" に戻す。
+        """
+        if time.time() - self.last_transcript_time >= 1:
+            self.canvas.itemconfig(self.bg_image_id, state='hidden')
+            self.canvas.itemconfig(self.text_id, state='hidden')
+        else:
+            self.canvas.itemconfig(self.bg_image_id, state='normal')
+            self.canvas.itemconfig(self.text_id, state='normal')
+        self.root.after(500, self.poll_silence)
+
     def update_text(self, text):
         """
         吹き出し内に表示するテキストを更新する。
-        もしテキスト全体の幅が指定幅を超える場合、右側（最新）の部分のみ表示する。
+        ・発話があった時刻を更新し、非表示状態を解除する。
+        ・テキスト全体の幅が指定幅を超える場合は、右側（最新部分）のみ表示する。
         """
+        self.last_transcript_time = time.time()
+        # 表示状態を強制的に "normal" に戻す
+        self.canvas.itemconfig(self.bg_image_id, state='normal')
+        self.canvas.itemconfig(self.text_id, state='normal')
+
         if self.text_font.measure(text) <= self.text_width_limit:
             display_text = text
         else:
@@ -248,6 +265,7 @@ class SpeechBubble:
     def hide(self):
         self.popup.withdraw()
         self.root.update()
+
 
 
 # ===============================
