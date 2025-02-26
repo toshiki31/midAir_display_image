@@ -217,17 +217,17 @@ class SpeechBubble:
         self.bg_height = new_height
 
         # Canvas を作成し、背景画像を配置
-        self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height)
+        self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height, bg="black")
         self.canvas.pack()
         # 初期位置は y=0 として背景画像を配置
         self.bg_image_id = self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
         # 字幕（テキスト）は背景画像の中央に配置（初期位置）
         self.text_id = self.canvas.create_text(popup_width / 2, new_height // 2,
                                                 text="",
-                                                font=("Arial", 100, "bold"),
+                                                font=("Arial", 200, "bold"),
                                                 fill="black",
                                                 width=popup_width - 100)
-        self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
+        self.text_font = tkfont.Font(family="Arial", size=200, weight="bold")
 
         self.last_transcript_time = time.time()
         self.poll_silence()
@@ -293,7 +293,7 @@ class FaceDetectionThread(threading.Thread):
     カメラ映像から顔検出を行い、検出された顔の上端に基づいて
     吹き出しウィンドウの背景画像と字幕の y 座標を更新するスレッドです。
     """
-    def __init__(self, speech_bubble, offset=100):
+    def __init__(self, speech_bubble, offset=600):
         super().__init__()
         self.speech_bubble = speech_bubble
         self.offset = offset
@@ -318,6 +318,7 @@ class FaceDetectionThread(threading.Thread):
                 face_top = y
                 # todo: いい感じに位置調整する
                 new_y = face_top - self.offset
+                logger.info(f"new_y: {new_y}")
                 if new_y < 0:
                     new_y = 0
                 # 背景画像と字幕の両方の位置を更新する
