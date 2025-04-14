@@ -1,5 +1,3 @@
-# .tobiienv内で実行してください
-
 import sys
 import asyncio
 import logging
@@ -29,8 +27,8 @@ MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
 WINDOW_WIDTH = 2500
 WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
-TRANSCRIPT_LANGUAGE_CODE = "ja-JP"  # 初期値
-TARGET_LANGUAGE_CODE = "en-US"    # 初期値
+TRANSCRIPT_LANGUAGE_CODE = "ja-JP" # 初期値
+TARGET_LANGUAGE_CODE = "en-US"  # 初期値
 REGION = "ap-northeast-1"
 SPEECH_BUBBLE1 = "./images/speech-bubble1.png"
 SPEECH_BUBBLE2 = "./images/speech-bubble2.png"
@@ -177,7 +175,7 @@ class SpeechBubble:
         self.root = tk.Tk()
         self.root.withdraw()
 
-        # ポップアップウィンドウの生成
+       # ポップアップウィンドウの生成
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Speech Bubble")
         self.popup.attributes("-topmost", True)
@@ -204,36 +202,21 @@ class SpeechBubble:
         popup_height = monitor_height
         self.popup.geometry(f"{popup_width}x{popup_height}+{monitor_x}+{monitor_y}")
 
-        # 保存用にウィンドウサイズ・スクリーン情報を保持
-        self.popup_width = popup_width
-        self.popup_height = popup_height
-        self.monitor_height = monitor_height
-
-        # 背景画像の読み込み
-        bg_image_path = SPEECH_BUBBLE1
-        self.bg_image_orig = Image.open(bg_image_path)
-        # 元画像サイズを取得
-        orig_width, orig_height = self.bg_image_orig.size
-        # ウィンドウ横幅に合わせた新しいサイズを計算（高さはアスペクト比に従う）
-        new_width = popup_width
-        new_height = int(orig_height * new_width / orig_width)
-        self.bg_image = self.bg_image_orig.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        self.photo = ImageTk.PhotoImage(self.bg_image)
-        self.bg_height = new_height
-
-        # Canvas を作成し、背景画像を配置
-        self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height, bg="black")
+        # Canvas を作成（背景色はグレー）
+        self.canvas = tk.Canvas(self.popup, width=popup_width, height=popup_height, bg="white")
         self.canvas.pack()
-        # 初期位置は y=0 として背景画像を配置
-        self.bg_image_id = self.canvas.create_image(0, 0, image=self.photo, anchor=tk.NW)
-        # 字幕（テキスト）は背景画像の中央に配置（初期位置）
-        self.text_id = self.canvas.create_text(popup_width / 2, new_height // 2,
-                                                text="",
-                                                font=("Arial", 200, "bold"),
-                                                fill="black",
-                                                width=popup_width - 100)
-        self.text_font = tkfont.Font(family="Arial", size=200, weight="bold")
 
+        # 吹き出し画像の表示処理は削除（画像は表示せず、背景はグレー）
+
+        # テキスト表示領域の設定（余白を取る）
+        self.text_width_limit = popup_width - 100
+        self.text_id = self.canvas.create_text(popup_width / 2, popup_height // 2,
+                                                text="",
+                                                font=("Arial", 100, "bold"),
+                                                fill="black",
+                                                width=self.text_width_limit)
+        self.text_font = tkfont.Font(family="Arial", size=100, weight="bold")
+        # 初回の発話時刻の初期化
         self.last_transcript_time = time.time()
         self.poll_silence()
 
@@ -243,45 +226,32 @@ class SpeechBubble:
         # ウィンドウの閉じるボタンが押されたときの処理
         self.popup.protocol("WM_DELETE_WINDOW", self.on_close)
 
-    def update_bg_position(self, new_y):
-        """
-        キャンバス上の背景画像と字幕の y 座標を更新する。
-        背景画像は new_y に、字幕は背景画像の高さの半分だけ下げた位置に設定する。
-        """
-        self.canvas.coords(self.bg_image_id, 0, new_y)
-        text_y = new_y + self.bg_height // 2
-        self.canvas.coords(self.text_id, self.popup_width / 2, text_y)
-
     def poll_silence(self):
         """
-        発話が2秒以上ない場合は、背景画像と字幕を非表示にする。
-        発話がある場合は表示状態を "normal" に戻す。
+        発話が一定時間ない場合は、字幕を非表示にする。
         """
         if time.time() - self.last_transcript_time >= 1:
-            self.canvas.itemconfig(self.bg_image_id, state='hidden')
             self.canvas.itemconfig(self.text_id, state='hidden')
         else:
-            self.canvas.itemconfig(self.bg_image_id, state='normal')
             self.canvas.itemconfig(self.text_id, state='normal')
         self.root.after(500, self.poll_silence)
 
     def update_text(self, text):
         """
         吹き出し内に表示するテキストを更新する。
-        ・発話があった時刻を更新し、非表示状態を解除する。
-        ・テキスト全体の幅が指定幅を超える場合は、右側（最新部分）のみ表示する。
+        発話があった時刻を更新し、非表示状態を解除する。
+        テキストが指定幅を超える場合は、右側（最新部分）のみ表示する。
         """
         self.last_transcript_time = time.time()
-        self.canvas.itemconfig(self.bg_image_id, state='normal')
         self.canvas.itemconfig(self.text_id, state='normal')
 
-        if self.text_font.measure(text) <= (self.popup_width - 100):
+        if self.text_font.measure(text) <= self.text_width_limit:
             display_text = text
         else:
             display_text = text
             for i in range(len(text)):
                 substring = text[i:]
-                if self.text_font.measure(substring) <= (self.popup_width - 100):
+                if self.text_font.measure(substring) <= self.text_width_limit:
                     display_text = substring
                     break
         self.canvas.itemconfig(self.text_id, text=display_text)
@@ -305,48 +275,6 @@ class SpeechBubble:
         if tobii_thread and tobii_thread.running:
             tobii_thread.stop_streaming_and_save()
         self.root.quit()
-
-# ===============================
-#   顔検出スレッド (FaceDetectionThread)
-# ===============================
-class FaceDetectionThread(threading.Thread):
-    """
-    カメラ映像から顔検出を行い、検出された顔の上端に基づいて
-    吹き出しウィンドウの背景画像と字幕の y 座標を更新するスレッドです。
-    """
-    def __init__(self, speech_bubble, offset=600):
-        super().__init__()
-        self.speech_bubble = speech_bubble
-        self.offset = offset
-        self.running = True
-        self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml")
-
-    def run(self):
-        cap = cv2.VideoCapture(0)
-        # memo: カメラ解像度の設定：popup の width と height と同じに設定する
-        cam_width = self.speech_bubble.popup_width
-        cam_height = self.speech_bubble.popup_height
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH, cam_width)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, cam_height)
-        while self.running:
-            ret, frame = cap.read()
-            if not ret:
-                continue
-            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-            faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5)
-            if len(faces) > 0:
-                (x, y, w, h) = faces[0]
-                face_top = y
-                # todo: いい感じに位置調整する
-                new_y = face_top - self.offset
-                logger.info(f"new_y: {new_y}")
-                if new_y < 0:
-                    new_y = 0
-                # 背景画像と字幕の両方の位置を更新する
-                self.speech_bubble.root.after(0, self.speech_bubble.update_bg_position, new_y)
-            time.sleep(0.1)
-        cap.release()
-
 
 class TobiiTrackingThread(threading.Thread):
     def __init__(self):
@@ -378,7 +306,7 @@ class TobiiTrackingThread(threading.Thread):
 
     def save_to_csv(self):
         date = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
-        filename = f"{date}_ChAerial_gaze_data.csv"
+        filename = f"{date}_projector_gaze_data.csv"
         with open(filename, 'w', newline='') as csvfile:
             fieldnames = ['left_eye_x', 'left_eye_y', 'right_eye_x', 'right_eye_y']
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -408,11 +336,12 @@ class ExitWindow:
         logger.info("終了ボタンが押されました。アプリケーションを終了します。")
         self.master.quit()
 
+
+
 # ===============================
 #   メインアプリケーション (Tkinter版)
 # ===============================
 def main():
-    global tobii_thread
     source_lang, target_lang = get_language_settings()
     global TRANSCRIPT_LANGUAGE_CODE, TARGET_LANGUAGE_CODE
     TRANSCRIPT_LANGUAGE_CODE = source_lang
@@ -425,10 +354,6 @@ def main():
     audio_thread = AudioTranscriptionThread(speech_bubble)
     audio_thread.daemon = True
     audio_thread.start()
-
-    face_thread = FaceDetectionThread(speech_bubble)
-    face_thread.daemon = True
-    face_thread.start()
 
     tobii_thread = TobiiTrackingThread()
     tobii_thread.daemon = True
@@ -446,3 +371,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
