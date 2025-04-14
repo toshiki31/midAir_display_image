@@ -240,6 +240,8 @@ class SpeechBubble:
         # キーボードイベントのバインド
         self.popup.bind("<Key>", self.on_key_press)
         self.popup.focus_set()
+        # ウィンドウの閉じるボタンが押されたときの処理
+        self.popup.protocol("WM_DELETE_WINDOW", self.on_close)
 
     def update_bg_position(self, new_y):
         """
@@ -298,6 +300,11 @@ class SpeechBubble:
             logger.info("qキーが押されました。アプリケーションを終了します。")
             self.root.quit()  # mainloopを終了させる
 
+    def on_close(self):
+        logger.info("ウィンドウが閉じられました。Tobiiデータを保存します。")
+        if tobii_thread and tobii_thread.running:
+            tobii_thread.stop_streaming_and_save()
+        self.root.quit()
 
 # ===============================
 #   顔検出スレッド (FaceDetectionThread)
@@ -342,9 +349,8 @@ class FaceDetectionThread(threading.Thread):
 
 
 class TobiiTrackingThread(threading.Thread):
-    def __init__(self, wait_time=5):
+    def __init__(self):
         super().__init__()
-        self.wait_time = wait_time
         self.gaze_data_list = []
         self.running = False
 
@@ -388,10 +394,25 @@ class TobiiTrackingThread(threading.Thread):
     def run(self):
         self.start_streaming()
 
+class ExitWindow:
+    def __init__(self, master):
+        self.window = tk.Toplevel(master)
+        self.window.title("制御パネル")
+        self.window.geometry("300x100+100+100")
+        self.window.attributes("-topmost", True)
+        self.button = tk.Button(self.window, text="終了する", font=("Arial", 32), command=self.quit_app)
+        self.button.pack(expand=True, fill='both')
+        self.master = master
+
+    def quit_app(self):
+        logger.info("終了ボタンが押されました。アプリケーションを終了します。")
+        self.master.quit()
+
 # ===============================
 #   メインアプリケーション (Tkinter版)
 # ===============================
 def main():
+    global tobii_thread
     source_lang, target_lang = get_language_settings()
     global TRANSCRIPT_LANGUAGE_CODE, TARGET_LANGUAGE_CODE
     TRANSCRIPT_LANGUAGE_CODE = source_lang
@@ -412,6 +433,8 @@ def main():
     tobii_thread = TobiiTrackingThread()
     tobii_thread.daemon = True
     tobii_thread.start()
+
+    exit_window = ExitWindow(speech_bubble.root)
 
     try:
         speech_bubble.root.mainloop()
