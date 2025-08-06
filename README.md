@@ -41,6 +41,27 @@ python3 -m venv [venvname]
 
 https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
 
+## バージョン管理
+バージョン管理はpyenvで行っている
+
+**現在のバージョン確認**
+
+```bash
+python -V
+```
+
+** pyenvで特定のバージョンをインストール
+
+```bash
+pyenv install [version]
+```
+
+** バージョンを設定（ローカル）**
+```bash
+pyenv local [version]
+```
+現在使用しているバージョンが `.python-version`に記載されている
+
 ## プロジェクトの構成
 
 ```
