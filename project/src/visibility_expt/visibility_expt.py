@@ -75,18 +75,20 @@ class SpeechBubble:
         self.photo     = ImageTk.PhotoImage(self.bg_image)
         self.bg_height = new_height
 
+        self.bg_y = 0 # 背景画像の Y 座標を保持する変数
+
         # Canvas に背景画像を配置
         self.canvas = tk.Canvas(self.root, width=popup_w, height=popup_h, bg="black")
         self.canvas.pack()
         self.bg_id = self.canvas.create_image(
-            0, 0, image=self.photo, anchor=tk.NW
+            0, self.bg_y, image=self.photo, anchor=tk.NW
         )
 
         # フォント準備＆テキスト配置
         self.font_size = FONT_SIZE
         self.text_font = tkfont.Font(family="Arial", size=self.font_size, weight="bold")
         self.text_id = self.canvas.create_text(
-            popup_w/2, new_height//2,
+            popup_w/2, self.bg_y + new_height//2,
             text="",
             font=self.text_font,
             fill="black",
@@ -135,6 +137,28 @@ class SpeechBubble:
         self.canvas.itemconfig(self.text_id, font=self.text_font)
         logger.info(f"フォントサイズを {self.font_size} に変更")
 
+    def move_bubble(self, delta_y):
+        """
+        背景画像とテキストを delta_y 分上下に移動させる。
+        画面外にはみ出さないよう clamp しています。
+        """
+        old_y = self.bg_y
+        # 移動後の Y 座標を計算
+        new_y = self.bg_y + delta_y
+        # clamp: 0〜(ウィンドウ高 − 画像高)
+        new_y = max(0, min(self.popup_height - self.bg_height, new_y))
+        self.bg_y = new_y
+
+        # 画像とテキストの座標を更新
+        self.canvas.coords(self.bg_id, 0, self.bg_y)
+        self.canvas.coords(
+            self.text_id,
+            self.popup_width/2,
+            self.bg_y + self.bg_height//2
+        )
+        self.root.update_idletasks()
+        logger.info(f"吹き出し移動: Y {old_y}→{self.bg_y}")
+
     def show(self):
         self.root.deiconify()
         self.root.update()
@@ -162,6 +186,10 @@ def main():
     bubble.root.bind_all("<Return>", create_random_text)
     bubble.root.bind_all("a", lambda e: bubble.change_font_size(+50))
     bubble.root.bind_all("s", lambda e: bubble.change_font_size(-50))
+
+    # Up/Down で吹き出しを上下移動
+    bubble.root.bind_all("<Up>",   lambda e: (bubble.move_bubble(-50), "break")) 
+    bubble.root.bind_all("<Down>", lambda e: (bubble.move_bubble(+50), "break"))
 
     bubble.root.mainloop()
 
