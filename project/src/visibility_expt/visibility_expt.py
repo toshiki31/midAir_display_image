@@ -28,15 +28,12 @@ logger = logging.getLogger(__name__)
 # ===============================
 class SpeechBubble:
     def __init__(self):
-        # メインウィンドウ
+        # メインウィンドウを枠なし全画面に
         self.root = tk.Tk()
-
-        # ポップアップウィンドウを生成（枠なし＋常に手前）
-        self.popup = tk.Toplevel(self.root)
-        self.popup.overrideredirect(True)
-        self.popup.attributes("-topmost", True)
-        self.popup.update_idletasks()
-        self.popup.update()
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+        self.root.update_idletasks()
+        self.root.update()
 
         # モニター情報取得（外部ディスプレイがあれば monitors[1] を使用）
         monitors = screeninfo.get_monitors()
@@ -55,16 +52,19 @@ class SpeechBubble:
         aspect_ratio = 16 / 10
         popup_w = int(monitor_height * aspect_ratio)
         popup_h = monitor_height
-        self.popup.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
+        self.root.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
 
-        # Canvas／吹き出し背景のサイズ情報を保持
+        self.root.lift()         # 最前面に
+        self.root.focus_force()  # キーボードフォーカスを強制
+        self.root.grab_set()     # 入力をこのウィンドウに集中
+
+        # ウィンドウサイズ情報を保持
         self.popup_width  = popup_w
         self.popup_height = popup_h
         self.monitor_height = monitor_height
 
         # 吹き出し画像の読み込み＆リサイズ
-        bg_image_path = SPEECH_BUBBLE_IMG
-        self.bg_image_orig = Image.open(bg_image_path)
+        self.bg_image_orig = Image.open(SPEECH_BUBBLE_IMG)
         orig_width, orig_height = self.bg_image_orig.size
         new_width  = popup_w
         new_height = int(orig_height * new_width / orig_width)
@@ -76,12 +76,10 @@ class SpeechBubble:
         self.bg_height = new_height
 
         # Canvas に背景画像を配置
-        self.canvas = tk.Canvas(self.popup, width=popup_w, height=popup_h, bg="black")
+        self.canvas = tk.Canvas(self.root, width=popup_w, height=popup_h, bg="black")
         self.canvas.pack()
         self.bg_id = self.canvas.create_image(
-            0, 0,
-            image=self.photo,
-            anchor=tk.NW
+            0, 0, image=self.photo, anchor=tk.NW
         )
 
         # フォント準備＆テキスト配置
@@ -112,7 +110,7 @@ class SpeechBubble:
     def update_text(self, text: str):
         # 表示更新＆自動隠蔽タイマーリセット
         self.last_time = time.time()
-        self.canvas.itemconfig(self.bg_id, state='normal')
+        self.canvas.itemconfig(self.bg_id,   state='normal')
         self.canvas.itemconfig(self.text_id, state='normal')
 
         # 幅がはみ出る場合は右側を切り詰め
@@ -126,7 +124,7 @@ class SpeechBubble:
 
         self.canvas.itemconfig(self.text_id, text=text)
         self.root.update_idletasks()
-    
+
     def change_font_size(self, delta):
         """フォントサイズを増減し、Canvas上のテキストを更新"""
         new = max(50, min(300, self.font_size + delta))
@@ -138,13 +136,12 @@ class SpeechBubble:
         logger.info(f"フォントサイズを {self.font_size} に変更")
 
     def show(self):
-        self.popup.deiconify()
+        self.root.deiconify()
         self.root.update()
 
     def hide(self):
-        self.popup.withdraw()
+        self.root.withdraw()
         self.root.update()
-
 
 # ===============================
 #   メイン
@@ -161,11 +158,9 @@ def main():
         bubble.update_text(rand_str)
         logger.info(f"表示文字: {rand_str}")
 
-    # Enter キー押下でランダム文字列生成
+    # Enter, a, s キーをバインド
     bubble.root.bind_all("<Return>", create_random_text)
-
-    # a/sでフォントサイズを増減
-    bubble.root.bind_all("a",   lambda e: bubble.change_font_size(+50))
+    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+50))
     bubble.root.bind_all("s", lambda e: bubble.change_font_size(-50))
 
     bubble.root.mainloop()
