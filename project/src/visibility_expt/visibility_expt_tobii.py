@@ -16,7 +16,9 @@ import csv                                               # ← 追加
 #   定数・設定の定義
 # ===============================
 SPEECH_BUBBLE_IMG = "./images/speech-bubble1.png"  # 吹き出し画像
-FONT_SIZE = 200
+FONT_SIZE = 100
+LIMIT_TIME = 60
+DELTA=25
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
@@ -99,8 +101,8 @@ class SpeechBubble:
         self._poll()
 
     def _poll(self):
-        # 3秒無操作で非表示、そうでなければ表示
-        if time.time() - self.last_time >= 30:
+        # 変数で与えられた秒数秒無操作で非表示、そうでなければ表示
+        if time.time() - self.last_time >= LIMIT_TIME:
             self.canvas.itemconfig(self.bg_id, state='hidden')
             self.canvas.itemconfig(self.text_id, state='hidden')
         else:
@@ -232,8 +234,8 @@ def main():
     bubble.root.bind_all("<Return>", lambda e: bubble.update_text(
         ''.join(random.choices(string.ascii_letters + string.digits, k=8))
     ))
-    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+50))
-    bubble.root.bind_all("s", lambda e: bubble.change_font_size(-50))
+    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+DELTA))
+    bubble.root.bind_all("s", lambda e: bubble.change_font_size(-DELTA))
     bubble.root.bind_all("<Up>",   lambda e: bubble.move_bubble(-50))
     bubble.root.bind_all("<Down>", lambda e: bubble.move_bubble(+50))
 

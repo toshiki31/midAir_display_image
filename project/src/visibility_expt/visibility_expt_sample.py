@@ -17,7 +17,10 @@ import screeninfo
 #   定数・設定の定義
 # ===============================
 SPEECH_BUBBLE_IMG = "./images/speech-bubble1.png"  # 吹き出し画像
-FONT_SIZE = 200
+FONT_SIZE = 100
+LIMIT_TIME=60
+DELTA=25
+
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +52,7 @@ class SpeechBubble:
             monitor_x = monitor_y = 0
 
         # アスペクト比16:10でウィンドウサイズを計算
-        aspect_ratio = 16 / 10
+        aspect_ratio = 16 / 9
         popup_w = int(monitor_height * aspect_ratio)
         popup_h = monitor_height
         self.root.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
@@ -101,7 +104,7 @@ class SpeechBubble:
 
     def _poll(self):
         # 3秒無操作で非表示、そうでなければ表示
-        if time.time() - self.last_time >= 3:
+        if time.time() - self.last_time >= LIMIT_TIME:
             self.canvas.itemconfig(self.bg_id, state='hidden')
             self.canvas.itemconfig(self.text_id, state='hidden')
         else:
@@ -184,8 +187,8 @@ def main():
 
     # Enter, a, s キーをバインド
     bubble.root.bind_all("<Return>", create_random_text)
-    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+50))
-    bubble.root.bind_all("s", lambda e: bubble.change_font_size(-50))
+    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+DELTA))
+    bubble.root.bind_all("s", lambda e: bubble.change_font_size(-DELTA))
 
     # Up/Down で吹き出しを上下移動
     bubble.root.bind_all("<Up>",   lambda e: (bubble.move_bubble(-50), "break")) 
