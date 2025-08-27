@@ -42,7 +42,8 @@ python3 -m venv [venvname]
 https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
 
 ## バージョン管理
-バージョン管理はpyenvで行っている
+
+バージョン管理は pyenv で行っている
 
 **現在のバージョン確認**
 
@@ -50,16 +51,18 @@ https://qiita.com/fiftystorm36/items/b2fd47cf32c7694adc2e
 python -V
 ```
 
-** pyenvで特定のバージョンをインストール
+\*\* pyenv で特定のバージョンをインストール
 
 ```bash
 pyenv install [version]
 ```
 
 ** バージョンを設定（ローカル）**
+
 ```bash
 pyenv local [version]
 ```
+
 現在使用しているバージョンが `.python-version`に記載されている
 
 ## プロジェクトの構成
@@ -75,6 +78,7 @@ pyenv local [version]
 │   │   ├── detect_faces_movie.py           // 表情認識で分析された感情を漫符として表示（動画）
 │   │   ├── detect_faces.py                 // 表情認識で分析された感情を漫符として表示（png画像）
 │   │   ├── display_translated_scripts.py   // 翻訳したテキストを表示（プロジェクター投影用）
+│   │   ├── display_translated_scripts.py   // 翻訳したテキストを表示+tobiiで視線計測（プロジェクター投影、会話実験用）
 │   │   ├── sample.py                       // 特定のキーボード押下でそれに対応した漫符を表示
 │   │   ├── subtitle.py                     // キーボードで入力した内容を漫符で表示した吹き出しの中に表示
 │   │   ├── texts_amd_faces_gif.py          // テキスト＋表情で感情分析した結果を漫符に表示（gif画像）
@@ -82,6 +86,7 @@ pyenv local [version]
 │   │   ├── texts_amd_faces.py              // テキスト＋表情で感情分析した結果を漫符に表示
 │   │   ├── transcribe.py                   // テキスト認識で分析された感情を漫符として表示
 │   │   ├── translated_speech_bubble.py     // 吹き出しの中に翻訳したテキストを表示
+│   │   ├── translated_speech_bubble2_tobii.py     // 吹き出しの中に翻訳したテキストを表示 + 顔の位置によって吹き出し位置（y軸）が動く + tobiiで視線計測（会話実験用）
 │   │   └── translated_speech_bubble2.py     // 吹き出しの中に翻訳したテキストを表示 + 顔の位置によって吹き出し位置（y軸）が動く
 │   └── requirements.txt                    // 仮想環境に必要なライブラリ管理
 ├── .gitignore

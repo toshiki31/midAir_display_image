@@ -1,0 +1,200 @@
+import sys
+import logging
+import time
+import random
+import string
+from PIL import Image, ImageTk
+import tkinter as tk
+import tkinter.font as tkfont
+import screeninfo
+
+# ===============================
+#   visibility_expt.py
+#   任意のキー押下でランダム8文字を吹き出しに表示
+# ===============================
+
+# ===============================
+#   定数・設定の定義
+# ===============================
+SPEECH_BUBBLE_IMG = "./images/speech-bubble1.png"  # 吹き出し画像
+FONT_SIZE = 100
+LIMIT_TIME=60
+DELTA=25
+
+
+# ロガーセットアップ
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# ===============================
+#   吹き出し表示クラス
+# ===============================
+class SpeechBubble:
+    def __init__(self):
+        # メインウィンドウを枠なし全画面に
+        self.root = tk.Tk()
+        self.root.overrideredirect(True)
+        self.root.attributes("-topmost", True)
+        self.root.update_idletasks()
+        self.root.update()
+
+        # モニター情報取得（外部ディスプレイがあれば monitors[1] を使用）
+        monitors = screeninfo.get_monitors()
+        if len(monitors) > 1:
+            second_monitor = monitors[1]
+            monitor_width  = second_monitor.width
+            monitor_height = second_monitor.height
+            monitor_x      = second_monitor.x
+            monitor_y      = second_monitor.y
+        else:
+            monitor_width  = self.root.winfo_screenwidth()
+            monitor_height = self.root.winfo_screenheight()
+            monitor_x = monitor_y = 0
+
+        # アスペクト比16:10でウィンドウサイズを計算
+        aspect_ratio = 16 / 9
+        popup_w = int(monitor_height * aspect_ratio)
+        popup_h = monitor_height
+        self.root.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
+
+        self.root.lift()         # 最前面に
+        self.root.focus_force()  # キーボードフォーカスを強制
+        self.root.grab_set()     # 入力をこのウィンドウに集中
+
+        # ウィンドウサイズ情報を保持
+        self.popup_width  = popup_w
+        self.popup_height = popup_h
+        self.monitor_height = monitor_height
+
+        # 吹き出し画像の読み込み＆リサイズ
+        self.bg_image_orig = Image.open(SPEECH_BUBBLE_IMG)
+        orig_width, orig_height = self.bg_image_orig.size
+        new_width  = popup_w
+        new_height = int(orig_height * new_width / orig_width)
+        self.bg_image = self.bg_image_orig.resize(
+            (new_width, new_height),
+            Image.Resampling.LANCZOS
+        )
+        self.photo     = ImageTk.PhotoImage(self.bg_image)
+        self.bg_height = new_height
+
+        self.bg_y = 0 # 背景画像の Y 座標を保持する変数
+
+        # Canvas に背景画像を配置
+        self.canvas = tk.Canvas(self.root, width=popup_w, height=popup_h, bg="black")
+        self.canvas.pack()
+        self.bg_id = self.canvas.create_image(
+            0, self.bg_y, image=self.photo, anchor=tk.NW
+        )
+
+        # フォント準備＆テキスト配置
+        self.font_size = FONT_SIZE
+        self.text_font = tkfont.Font(family="Arial", size=self.font_size, weight="bold")
+        self.text_id = self.canvas.create_text(
+            popup_w/2, self.bg_y + new_height//2,
+            text="",
+            font=self.text_font,
+            fill="black",
+            width=popup_w-100
+        )
+
+        # 自動隠蔽タイマー開始
+        self.last_time = time.time()
+        self._poll()
+
+    def _poll(self):
+        # 3秒無操作で非表示、そうでなければ表示
+        if time.time() - self.last_time >= LIMIT_TIME:
+            self.canvas.itemconfig(self.bg_id, state='hidden')
+            self.canvas.itemconfig(self.text_id, state='hidden')
+        else:
+            self.canvas.itemconfig(self.bg_id, state='normal')
+            self.canvas.itemconfig(self.text_id, state='normal')
+        self.root.after(500, self._poll)
+
+    def update_text(self, text: str):
+        # 表示更新＆自動隠蔽タイマーリセット
+        self.last_time = time.time()
+        self.canvas.itemconfig(self.bg_id,   state='normal')
+        self.canvas.itemconfig(self.text_id, state='normal')
+
+        # 幅がはみ出る場合は右側を切り詰め
+        max_w = self.canvas.winfo_width() - 100
+        if self.text_font.measure(text) > max_w:
+            for i in range(len(text)):
+                sub = text[i:]
+                if self.text_font.measure(sub) <= max_w:
+                    text = sub
+                    break
+
+        self.canvas.itemconfig(self.text_id, text=text)
+        self.root.update_idletasks()
+
+    def change_font_size(self, delta):
+        """フォントサイズを増減し、Canvas上のテキストを更新"""
+        new = max(50, min(300, self.font_size + delta))
+        if new == self.font_size:
+            return
+        self.font_size = new
+        self.text_font.configure(size=self.font_size)
+        self.canvas.itemconfig(self.text_id, font=self.text_font)
+        logger.info(f"フォントサイズを {self.font_size} に変更")
+
+    def move_bubble(self, delta_y):
+        """
+        背景画像とテキストを delta_y 分上下に移動させる。
+        画面外にはみ出さないよう clamp しています。
+        """
+        old_y = self.bg_y
+        # 移動後の Y 座標を計算
+        new_y = self.bg_y + delta_y
+        # clamp: 0〜(ウィンドウ高 − 画像高)
+        new_y = max(0, min(self.popup_height - self.bg_height, new_y))
+        self.bg_y = new_y
+
+        # 画像とテキストの座標を更新
+        self.canvas.coords(self.bg_id, 0, self.bg_y)
+        self.canvas.coords(
+            self.text_id,
+            self.popup_width/2,
+            self.bg_y + self.bg_height//2
+        )
+        self.root.update_idletasks()
+        logger.info(f"吹き出し移動: Y {old_y}→{self.bg_y}")
+
+    def show(self):
+        self.root.deiconify()
+        self.root.update()
+
+    def hide(self):
+        self.root.withdraw()
+        self.root.update()
+
+# ===============================
+#   メイン
+# ===============================
+def main():
+    bubble = SpeechBubble()
+    bubble.show()
+
+    # Enterキー押下でランダム8文字を表示
+    def create_random_text(event):
+        rand_str = ''.join(
+            random.choices(string.ascii_letters + string.digits, k=8)
+        )
+        bubble.update_text(rand_str)
+        logger.info(f"表示文字: {rand_str}")
+
+    # Enter, a, s キーをバインド
+    bubble.root.bind_all("<Return>", create_random_text)
+    bubble.root.bind_all("a", lambda e: bubble.change_font_size(+DELTA))
+    bubble.root.bind_all("s", lambda e: bubble.change_font_size(-DELTA))
+
+    # Up/Down で吹き出しを上下移動
+    bubble.root.bind_all("<Up>",   lambda e: (bubble.move_bubble(-50), "break")) 
+    bubble.root.bind_all("<Down>", lambda e: (bubble.move_bubble(+50), "break"))
+
+    bubble.root.mainloop()
+
+if __name__ == '__main__':
+    main()
