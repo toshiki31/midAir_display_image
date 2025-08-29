@@ -50,7 +50,7 @@ class SpeechBubble:
             monitor_x = monitor_y = 0
 
         # アスペクト比16:10でウィンドウサイズを計算
-        aspect_ratio = 16 / 10
+        aspect_ratio = 16 / 9
         popup_w = int(monitor_height * aspect_ratio)
         popup_h = monitor_height
         self.root.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
