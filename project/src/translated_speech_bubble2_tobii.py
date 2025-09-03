@@ -1,5 +1,5 @@
 # .tobiienv内で実行してください
-
+# translated_speech_bubble2_tobii.py
 import sys
 import asyncio
 import logging
@@ -11,7 +11,7 @@ import pyaudio
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-from PIL import Image, ImageTk
+from PIL import Image, ImageTkf
 import tkinter as tk
 import tkinter.font as tkfont
 import screeninfo
@@ -28,13 +28,14 @@ CHUNK_SIZE = 1024
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
 WINDOW_WIDTH = 2500
-WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
+WINDOW_HEIGHT = int(WINDOW_WIDTH * 9 / 16)
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP"  # 初期値
 TARGET_LANGUAGE_CODE = "en-US"    # 初期値
 REGION = "ap-northeast-1"
 SPEECH_BUBBLE1 = "./images/speech-bubble1.png"
 SPEECH_BUBBLE2 = "./images/speech-bubble2.png"
 SPEECH_BUBBLE3 = "./images/speech-bubble3.png"
+FONT_SIZE = 100
 
 # ロガーセットアップ
 logging.basicConfig(level=logging.INFO)
@@ -229,10 +230,10 @@ class SpeechBubble:
         # 字幕（テキスト）は背景画像の中央に配置（初期位置）
         self.text_id = self.canvas.create_text(popup_width / 2, new_height // 2,
                                                 text="",
-                                                font=("Arial", 200, "bold"),
+                                                font=("Arial", FONT_SIZE, "bold"),
                                                 fill="black",
                                                 width=popup_width - 100)
-        self.text_font = tkfont.Font(family="Arial", size=200, weight="bold")
+        self.text_font = tkfont.Font(family="Arial", size=FONT_SIZE, weight="bold")
 
         self.last_transcript_time = time.time()
         self.poll_silence()
@@ -299,6 +300,21 @@ class SpeechBubble:
         if event.char == 'q':
             logger.info("qキーが押されました。アプリケーションを終了します。")
             self.root.quit()  # mainloopを終了させる
+
+        # ===== 追加：視線計測の開始/停止キー =====
+        elif event.char == 'f':  # g: gaze start
+            if tobii_thread and not tobii_thread.running:
+                logger.info("fキーが押されました。Tobiiの視線計測を開始します。")
+                tobii_thread.start_streaming()
+            else:
+                logger.info("fキー：すでに計測中、またはTobiiが初期化されていません。")
+        elif event.char == 'j':  # h: halt (stop & save)
+            if tobii_thread and tobii_thread.running:
+                logger.info("jキーが押されました。Tobiiの視線計測を停止してCSVに保存します。")
+                tobii_thread.stop_streaming_and_save()
+            else:
+                logger.info("jキー：計測は実行されていません。")
+        # =======================================
 
     def on_close(self):
         logger.info("ウィンドウが閉じられました。Tobiiデータを保存します。")
@@ -431,8 +447,6 @@ def main():
     face_thread.start()
 
     tobii_thread = TobiiTrackingThread()
-    tobii_thread.daemon = True
-    tobii_thread.start()
 
     exit_window = ExitWindow(speech_bubble.root)
 
