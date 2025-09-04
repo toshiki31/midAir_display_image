@@ -11,7 +11,7 @@ import pyaudio
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-from PIL import Image, ImageTkf
+from PIL import Image, ImageTk
 import tkinter as tk
 import tkinter.font as tkfont
 import screeninfo
@@ -53,7 +53,7 @@ def get_language_settings():
     tk.Label(dialog, text="翻訳元言語:").grid(row=0, column=0, padx=10, pady=10)
     tk.Label(dialog, text="翻訳先言語:").grid(row=1, column=0, padx=10, pady=10)
     
-    languages = ["ja-JP", "en-US", "fr-FR", "de-DE", "es-ES"]
+    languages = ["ja-JP", "en-US", "fr-FR", "de-DE", "es-ES", "zh-CN"]
     source_var = tk.StringVar(value=languages[0])
     target_var = tk.StringVar(value=languages[1])
     tk.OptionMenu(dialog, source_var, *languages).grid(row=0, column=1, padx=10, pady=10)
