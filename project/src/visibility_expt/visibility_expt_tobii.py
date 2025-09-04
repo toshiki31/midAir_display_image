@@ -3,14 +3,14 @@ import logging
 import time
 import random
 import string
-import threading                                         # ← 追加
-from datetime import datetime                           # ← 追加
+import threading
+from datetime import datetime
 from PIL import Image, ImageTk
 import tkinter as tk
 import tkinter.font as tkfont
 import screeninfo
-import tobii_research as tr                              # ← 追加
-import csv                                               # ← 追加
+import tobii_research as tr
+import csv
 
 # ===============================
 #   定数・設定の定義
@@ -50,7 +50,7 @@ class SpeechBubble:
             monitor_x = monitor_y = 0
 
         # アスペクト比16:10でウィンドウサイズを計算
-        aspect_ratio = 16 / 10
+        aspect_ratio = 16 / 9
         popup_w = int(monitor_height * aspect_ratio)
         popup_h = monitor_height
         self.root.geometry(f"{popup_w}x{popup_h}+{monitor_x}+{monitor_y}")
@@ -169,10 +169,12 @@ class SpeechBubble:
 #   Tobii 視線計測スレッド
 # ===============================
 class TobiiTrackingThread(threading.Thread):
-    def __init__(self):
+    def __init__(self, bubble):   # bubbleを受け取る
         super().__init__()
         self.gaze_data_list = []
         self.running = False
+        self.start_time = None
+        self.bubble = bubble  # ← bubbleを保持
 
         found = tr.find_all_eyetrackers()
         if not found:
@@ -187,6 +189,8 @@ class TobiiTrackingThread(threading.Thread):
             logger.info("Tobii: すでに計測中です")
             return
         self.running = True
+        self.start_time = time.time()
+        self.gaze_data_list = []  # ← 新しい計測ではリストをリセット
         logger.info("Tobii: 計測開始")
         self.eyetracker.subscribe_to(
             tr.EYETRACKER_GAZE_DATA,
@@ -203,8 +207,15 @@ class TobiiTrackingThread(threading.Thread):
             tr.EYETRACKER_GAZE_DATA,
             self.gaze_callback
         )
-        # CSV に保存
-        filename = datetime.now().strftime("visibility_expt_%Y%m%d_%H%M%S.csv")
+
+        elapsed = time.time() - self.start_time if self.start_time else 0
+        logger.info(f"Tobii: 計測時間 {elapsed:.2f} 秒")
+
+        # Bubbleのフォントサイズと位置を含めたファイル名
+        filename = datetime.now().strftime(
+            f"visibility_expt_%Y%m%d_%H%M%S_font{self.bubble.font_size}_y{self.bubble.bg_y}.csv"
+        )
+
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)
             writer.writerow(['left_x','left_y','right_x','right_y'])
@@ -214,9 +225,11 @@ class TobiiTrackingThread(threading.Thread):
                 writer.writerow([lx, ly, rx, ry])
         logger.info(f"Tobii: データを {filename} に保存")
 
-    def run(self):
-        # スレッド開始直後に測定開始
-        self.start_streaming()
+    def toggle_streaming(self):
+        if self.running:
+            self.stop_and_save()
+        else:
+            self.start_streaming()
 
 
 # ===============================
@@ -226,8 +239,7 @@ def main():
     bubble = SpeechBubble()
     bubble.show()
 
-    # Tobii スレッド生成（ただちに run() で計測開始はしない）
-    tobii_thread = TobiiTrackingThread()
+    tobii_thread = TobiiTrackingThread(bubble)
     tobii_thread.daemon = True
 
     # キー操作バインド
@@ -239,11 +251,9 @@ def main():
     bubble.root.bind_all("<Up>",   lambda e: bubble.move_bubble(-50))
     bubble.root.bind_all("<Down>", lambda e: bubble.move_bubble(+50))
 
-    # ← ここから Tobii 用のキー
-    bubble.root.bind_all("g",     lambda e: (tobii_thread.start_streaming(), "break"))   # 計測開始
-    bubble.root.bind_all("h",     lambda e: (tobii_thread.stop_and_save(),  "break"))   # 計測停止＆保存
+    # Tobii用キー: fキーで開始・停止をトグル
+    bubble.root.bind_all("f", lambda e: (tobii_thread.toggle_streaming(), "break"))
 
-    # メインループ
     bubble.root.mainloop()
 
 if __name__ == "__main__":
