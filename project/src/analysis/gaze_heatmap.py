@@ -140,9 +140,26 @@ def build_heatmap(xi: np.ndarray, yi: np.ndarray, width: int, height: int, sigma
     return heat
 
 
-def render_and_save(heat: np.ndarray, out_path: str, cmap: str = "turbo") -> None:
+def render_and_save(
+    heat: np.ndarray,
+    out_path: str,
+    cmap: str = "turbo",
+    # 線引くために必要なやつ =========================
+    hline: float | None = None,  # 0..1 の正規化y位置に水平線を描画
+    hline_color: str = "white",
+    hline_width: float = 2.0,
+    # ============================================
+) -> None:
     plt.figure(figsize=(10, 6), dpi=150)
     plt.imshow(heat, cmap=cmap, origin="upper")  # 左上が(0,0)
+    # 線引くために必要なやつ ========
+    ax = plt.gca()
+    # 水平線（0..1正規化のyをピクセルへ変換して描画）
+    if hline is not None:
+        h = heat.shape[0]
+        y_pix = float(np.clip(hline, 0.0, 1.0)) * (h - 1)
+        ax.axhline(y=y_pix, color=hline_color, linewidth=hline_width)
+    # ===========================
     plt.axis("off")
     os.makedirs(os.path.dirname(out_path), exist_ok=True)
     plt.savefig(out_path, bbox_inches="tight", pad_inches=0)
@@ -156,7 +173,12 @@ def main():
     parser.add_argument("--canvas-width", type=int, default=1920, help="キャンバス幅(ピクセル)")
     parser.add_argument("--canvas-height", type=int, default=1080, help="キャンバス高(ピクセル)")
     parser.add_argument("--sigma", type=int, default=21, help="ガウシアン平滑化カーネルサイズ（奇数）")
+    # 線引くために必要なやつ ========
     parser.add_argument("--cmap", type=str, default="turbo", help="Matplotlibカラーマップ名")
+    parser.add_argument("--hline", type=float, default=None, help="0..1の正規化yで水平線を描画 (例: 0.5)")
+    parser.add_argument("--hline-color", type=str, default="white", help="水平線の色 (例: red, #00FF00)")
+    parser.add_argument("--hline-width", type=float, default=2.0, help="水平線の太さ")
+    # ===========================
     # 座標系オプション
     parser.add_argument("--flip-x", action="store_true", help="X軸を反転（x=0とx=1を入れ替え）")
     parser.add_argument("--flip-y", action="store_true", help="Y軸を反転（y=0とy=1を入れ替え）")
@@ -239,7 +261,16 @@ def main():
         base, _ = os.path.splitext(csv_path)
         out_path = f"{base}_heatmap.png"
 
-    render_and_save(heat, out_path, cmap=args.cmap)
+    render_and_save(
+        heat,
+        out_path,
+        cmap=args.cmap,
+        # 線引くために必要なやつ ========
+        hline=args.hline,
+        hline_color=args.hline_color,
+        hline_width=args.hline_width,
+        # ===========================
+    )
     print(f"Saved heatmap -> {out_path}")
 
 
