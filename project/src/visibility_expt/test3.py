@@ -1,3 +1,8 @@
+# ===============================
+#   視線が画面下方に来たら、外部モニター上の吹き出しにスローン文字（視力検査で使う10種類の文字）4文字をランダム表示し、
+#   位置も5パターンでランダムに動かす。計測の開始/停止で視線データをCSVに保存できるコード
+# ===============================
+
 import sys
 import logging
 import time
@@ -19,9 +24,9 @@ SPEECH_BUBBLE_IMG = "./images/speech-bubble1.png"  # 吹き出し画像
 FONT_SIZE = 100
 LIMIT_TIME = 60
 DELTA = 25
-BOTTOM_OFFSET = 200  # 「左下/右下」は基準Yからこの分だけ下げる
-X_OFFSET = 100 # モニターの位置を下げた時に拡大されるからOffsetつける
-Y_OFFSET = 100
+BOTTOM_OFFSET = 400  # 「左下/右下」は基準Yからこの分だけ下げる
+X_OFFSET = 200 # モニターの位置を下げた時に拡大されるからOffsetつける
+Y_OFFSET = 300
 
 # スローン文字（Sloan letters）
 SLOAN_LETTERS = "CDHKNORSVZ"
