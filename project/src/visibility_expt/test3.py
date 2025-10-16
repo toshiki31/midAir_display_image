@@ -21,7 +21,7 @@ import csv
 #   定数・設定の定義
 # ===============================
 SPEECH_BUBBLE_IMG = "./images/speech-bubble1.png"  # 吹き出し画像
-FONT_SIZE = 100
+FONT_SIZE = 150
 LIMIT_TIME = 60
 DELTA = 25
 BOTTOM_OFFSET = 400  # 「左下/右下」は基準Yからこの分だけ下げる
@@ -254,6 +254,10 @@ class TobiiTrackingThread(threading.Thread):
                 now = time.time()
                 if now - self.last_trigger >= 0.8:  # クールダウン
                     self.last_trigger = now
+                    # 初回単語表示時にタイマー開始
+                    if self.start_time is None:
+                        self.start_time = now
+                        logger.info(f"Tobii: タイマー開始（初回単語表示）")
                     text = random_sloan(4)
                     # Tkのメインスレッドで更新
                     self.bubble.root.after(0, self.bubble.update_text, text)
@@ -265,7 +269,7 @@ class TobiiTrackingThread(threading.Thread):
             logger.info("Tobii: すでに計測中です")
             return
         self.running = True
-        self.start_time = time.time()
+        self.start_time = None  # 初回単語表示時に開始するため、ここではNone
         self.gaze_data_list = []
         logger.info("Tobii: 計測開始")
         self.eyetracker.subscribe_to(
