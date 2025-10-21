@@ -302,6 +302,8 @@ class TobiiTrackingThread(threading.Thread):
                 lx, ly = d.get('left_gaze_point_on_display_area', (None, None))
                 rx, ry = d.get('right_gaze_point_on_display_area', (None, None))
                 writer.writerow([lx, ly, rx, ry])
+            # 計測時間を最終行に追加
+            writer.writerow(['計測時間', f'{elapsed:.2f}秒'])
         logger.info(f"Tobii: データを {filename} に保存")
 
     def toggle_streaming(self):
