@@ -273,11 +273,25 @@ class FriedmanAnalysis:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Map condition labels from a,b,c,d,e to distance in cm
+        condition_labels = {
+            'a': '0cm',
+            'b': '15cm',
+            'c': '30cm',
+            'd': '45cm',
+            'e': '60cm'
+        }
+        distance_order = ['0cm', '15cm', '30cm', '45cm', '60cm']
+
+        # Create a copy of dataframe with mapped labels
+        df_plot = df.copy()
+        df_plot['condition'] = df_plot['condition'].map(condition_labels)
+
         # 1. Box plot emphasizing median
         fig, ax = plt.subplots(figsize=(12, 7))
 
-        sns.boxplot(data=df, x='condition', y='performance', ax=ax,
-                   palette='Set2', showmeans=True,
+        sns.boxplot(data=df_plot, x='condition', y='performance', ax=ax,
+                   palette='Set2', showmeans=True, order=distance_order,
                    meanprops={'marker': 'D', 'markerfacecolor': 'red', 'markersize': 8})
 
         ax.set_title(f'Box Plot - {analysis_name}\n(Red diamond = mean, line = median)',
@@ -295,7 +309,11 @@ class FriedmanAnalysis:
         # 2. Bar plot with MEDIAN (not mean) for non-parametric
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        summary = df.groupby('condition')['performance'].agg(['median', 'mean']).reset_index()
+        summary = df_plot.groupby('condition')['performance'].agg(['median', 'mean']).reset_index()
+        # Ensure correct order
+        summary['condition'] = pd.Categorical(summary['condition'],
+                                             categories=distance_order, ordered=True)
+        summary = summary.sort_values('condition')
 
         x_pos = np.arange(len(summary))
         bars = ax.bar(x_pos, summary['median'], alpha=0.7, color='skyblue',
@@ -328,8 +346,13 @@ class FriedmanAnalysis:
         # 3. Individual participant trajectories
         fig, ax = plt.subplots(figsize=(12, 8))
 
-        for participant in sorted(df['participant'].unique()):
-            participant_data = df[df['participant'] == participant].sort_values('condition')
+        for participant in sorted(df_plot['participant'].unique()):
+            participant_data = df_plot[df_plot['participant'] == participant].copy()
+            # Sort by original order
+            participant_data['condition_cat'] = pd.Categorical(
+                participant_data['condition'], categories=distance_order, ordered=True
+            )
+            participant_data = participant_data.sort_values('condition_cat')
             ax.plot(participant_data['condition'], participant_data['performance'],
                    marker='o', label=participant, linewidth=2, markersize=8)
 
@@ -353,8 +376,15 @@ class FriedmanAnalysis:
         df_ranks = df.copy()
         df_ranks['rank'] = df_ranks.groupby('participant')['performance'].rank(ascending=False)
 
+        # Map condition labels
+        df_ranks['condition'] = df_ranks['condition'].map(condition_labels)
+
         rank_summary = df_ranks.groupby('condition')['rank'].agg(['mean', 'std']).reset_index()
-        rank_summary = rank_summary.sort_values('mean')
+
+        # Sort by distance order (0cm to 60cm from top to bottom)
+        rank_summary['condition'] = pd.Categorical(rank_summary['condition'],
+                                                   categories=distance_order, ordered=True)
+        rank_summary = rank_summary.sort_values('condition')
 
         x_pos = np.arange(len(rank_summary))
         bars = ax.barh(x_pos, rank_summary['mean'], xerr=rank_summary['std'],
@@ -362,6 +392,7 @@ class FriedmanAnalysis:
 
         ax.set_yticks(x_pos)
         ax.set_yticklabels(rank_summary['condition'])
+        ax.invert_yaxis()  # 0cm at top, 60cm at bottom
         ax.set_title(f'Mean Rank by Condition - {analysis_name}\n(Lower rank = better performance)',
                     fontsize=14, fontweight='bold')
         ax.set_xlabel('Mean Rank (± SD)', fontsize=12)

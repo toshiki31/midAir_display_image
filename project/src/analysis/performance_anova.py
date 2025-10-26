@@ -300,18 +300,34 @@ class PerformanceANOVA:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
+        # Map condition labels from a,b,c,d,e to distance in cm
+        condition_labels = {
+            'a': '0cm',
+            'b': '15cm',
+            'c': '30cm',
+            'd': '45cm',
+            'e': '60cm'
+        }
+        distance_order = ['0cm', '15cm', '30cm', '45cm', '60cm']
+
+        # Create a copy of dataframe with mapped labels
+        df_plot = df.copy()
+        df_plot['distance'] = df_plot['distance'].map(condition_labels)
+
         # 1. Box plot and violin plot combined
         fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
         # Box plot
-        sns.boxplot(data=df, x='distance', y='performance', ax=axes[0], palette='Set2')
+        sns.boxplot(data=df_plot, x='distance', y='performance', ax=axes[0],
+                   palette='Set2', order=distance_order)
         axes[0].set_title(f'Box Plot - {analysis_name}', fontsize=14, fontweight='bold')
         axes[0].set_xlabel('Distance Condition', fontsize=12)
         axes[0].set_ylabel('Performance', fontsize=12)
         axes[0].grid(True, alpha=0.3)
 
         # Violin plot
-        sns.violinplot(data=df, x='distance', y='performance', ax=axes[1], palette='Set2')
+        sns.violinplot(data=df_plot, x='distance', y='performance', ax=axes[1],
+                      palette='Set2', order=distance_order)
         axes[1].set_title(f'Violin Plot - {analysis_name}', fontsize=14, fontweight='bold')
         axes[1].set_xlabel('Distance Condition', fontsize=12)
         axes[1].set_ylabel('Performance', fontsize=12)
@@ -326,8 +342,13 @@ class PerformanceANOVA:
         # 2. Individual participant trajectories
         fig, ax = plt.subplots(figsize=(12, 8))
 
-        for participant in sorted(df['participant'].unique()):
-            participant_data = df[df['participant'] == participant].sort_values('distance')
+        for participant in sorted(df_plot['participant'].unique()):
+            participant_data = df_plot[df_plot['participant'] == participant].copy()
+            # Sort by original order
+            participant_data['distance_cat'] = pd.Categorical(
+                participant_data['distance'], categories=distance_order, ordered=True
+            )
+            participant_data = participant_data.sort_values('distance_cat')
             ax.plot(participant_data['distance'], participant_data['performance'],
                    marker='o', label=participant, linewidth=2, markersize=8)
 
@@ -345,16 +366,15 @@ class PerformanceANOVA:
         plt.close()
 
         # 3. Q-Q plots for normality assessment
-        distances = sorted(df['distance'].unique())
-        n_distances = len(distances)
+        n_distances = len(distance_order)
         n_cols = 3
         n_rows = int(np.ceil(n_distances / n_cols))
 
         fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5*n_rows))
         axes = axes.flatten() if n_distances > 1 else [axes]
 
-        for idx, distance in enumerate(distances):
-            data = df[df['distance'] == distance]['performance']
+        for idx, distance in enumerate(distance_order):
+            data = df_plot[df_plot['distance'] == distance]['performance']
             stats.probplot(data, dist="norm", plot=axes[idx])
             axes[idx].set_title(f'Q-Q Plot: Distance {distance}', fontsize=11, fontweight='bold')
             axes[idx].grid(True, alpha=0.3)
@@ -372,7 +392,11 @@ class PerformanceANOVA:
         # 4. Bar plot with error bars (mean ± SEM)
         fig, ax = plt.subplots(figsize=(10, 6))
 
-        summary = df.groupby('distance')['performance'].agg(['mean', 'sem']).reset_index()
+        summary = df_plot.groupby('distance')['performance'].agg(['mean', 'sem']).reset_index()
+        # Ensure correct order
+        summary['distance'] = pd.Categorical(summary['distance'],
+                                            categories=distance_order, ordered=True)
+        summary = summary.sort_values('distance')
 
         bars = ax.bar(summary['distance'], summary['mean'],
                      yerr=summary['sem'], capsize=8,
