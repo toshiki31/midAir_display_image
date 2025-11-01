@@ -89,6 +89,11 @@ class NASATLXAnalysis:
                 participant = match.group(1)
                 condition = match.group(2)
 
+                # Exclude taninaka (outlier)
+                if 'taninaka' in participant.lower() or '谷中' in participant.lower():
+                    print(f"Excluding {csv_file.name}: taninaka is an outlier")
+                    continue
+
                 # Fix typo: hodna -> honda
                 if participant.lower() == 'hodna':
                     participant = 'honda'

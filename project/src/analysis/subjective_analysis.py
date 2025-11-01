@@ -85,7 +85,15 @@ class SubjectiveAnalysis:
 
         # Read CSV
         self.df_raw = pd.read_csv(self.csv_path)
-        print(f"\nRaw data shape: {self.df_raw.shape}")
+
+        # Exclude taninaka (outlier) - filter by name column '氏名'
+        if '氏名' in self.df_raw.columns:
+            original_shape = self.df_raw.shape
+            self.df_raw = self.df_raw[~self.df_raw['氏名'].str.contains('taninaka|谷中', case=False, na=False)]
+            excluded_count = original_shape[0] - self.df_raw.shape[0]
+            print(f"\nRaw data shape: {self.df_raw.shape} (excluded {excluded_count} rows for taninaka/谷中)")
+        else:
+            print(f"\nRaw data shape: {self.df_raw.shape}")
 
         # Extract relevant columns
         # Column 3: condition, Columns 4-9: evaluation items

@@ -52,7 +52,13 @@ class PerformanceANOVA:
         print("=" * 80)
 
         self.df_raw = pd.read_csv(self.csv_path)
-        print(f"\nRaw data shape: {self.df_raw.shape}")
+
+        # Exclude taninaka (outlier) - filter by name containing 'taninaka' or '谷中'
+        original_shape = self.df_raw.shape
+        self.df_raw = self.df_raw[~self.df_raw['name'].str.contains('taninaka|谷中', case=False, na=False)]
+        excluded_count = original_shape[0] - self.df_raw.shape[0]
+
+        print(f"\nRaw data shape: {self.df_raw.shape} (excluded {excluded_count} rows for taninaka/谷中)")
         print(f"Columns: {list(self.df_raw.columns)}")
         print(f"\nFirst few rows:")
         print(self.df_raw.head(10))
