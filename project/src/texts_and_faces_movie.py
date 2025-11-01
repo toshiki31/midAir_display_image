@@ -22,8 +22,7 @@ CHUNK_SIZE = 1024
 TRANSCRIPT_LANGUAGE_CODE = "ja-JP"
 MEDIA_ENCODING = "pcm"
 COMPREHEND_LANGUAGE_CODE = "ja"
-WINDOW_WIDTH = 2500
-WINDOW_HEIGHT = int(WINDOW_WIDTH * 10 / 16)
+# ウィンドウサイズはモニターの解像度に基づいて動的に設定されます
 
 # パス設定
 IMAGE_BLACK = "./images/black.png"
@@ -61,6 +60,10 @@ class FullScreenVideoWindow(QWidget):
         layout.addWidget(self.video_label)
         self.setLayout(layout)
 
+        # モニターサイズを保持（後で move_to_secondary_screen で設定）
+        self.window_width = 0
+        self.window_height = 0
+
         # シグナルでフレームを更新
         self.frame_ready.connect(self.update_frame)
 
@@ -78,20 +81,29 @@ class FullScreenVideoWindow(QWidget):
         if screen_count > 1:
             # 第2モニターのジオメトリを取得
             screen_geometry = desktop.screenGeometry(1)  # 第2モニター
+            logger.info(f"Using secondary monitor (Monitor 1)")
         else:
             # 第1モニターにフォールバック
             screen_geometry = desktop.screenGeometry(0)
+            logger.info(f"Only one monitor detected, using primary monitor")
 
+        # モニターの実際の解像度を取得
+        self.window_width = screen_geometry.width()
+        self.window_height = screen_geometry.height()
+        logger.info(f"Monitor resolution: {self.window_width}x{self.window_height}")
+
+        # ウィンドウをモニターに合わせて配置
         self.setGeometry(screen_geometry)
         self.showFullScreen()
 
 class VideoThread(QThread):
     frame_ready = pyqtSignal(np.ndarray)
 
-    def __init__(self):
+    def __init__(self, video_window):
         super().__init__()
         self.running = False
         self.video_path = None
+        self.video_window = video_window
 
     def start_video(self, video_path):
         """動画再生を開始"""
@@ -99,6 +111,10 @@ class VideoThread(QThread):
         if not self.running:
             self.running = True
             self.start()
+
+    def stop(self):
+        """動画再生を停止"""
+        self.running = False
 
     def run(self):
         cap = cv2.VideoCapture(self.video_path)
@@ -112,7 +128,8 @@ class VideoThread(QThread):
             if not ret:
                 break
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)  # カラー変換を先に実行
-            frame = cv2.resize(frame, (WINDOW_WIDTH, WINDOW_HEIGHT), interpolation=cv2.INTER_LINEAR)  # 高速な補間方法を選択
+            # モニターの実際の解像度に合わせてリサイズ
+            frame = cv2.resize(frame, (self.video_window.window_width, self.video_window.window_height), interpolation=cv2.INTER_LINEAR)
             self.frame_ready.emit(frame)
             self.msleep(16)  # 60FPS相当
 
@@ -250,8 +267,8 @@ class EmotionApp(QWidget):
         self.video_window = FullScreenVideoWindow()
         self.video_window.move_to_secondary_screen()
 
-        # 動画スレッド
-        self.video_thread = VideoThread()
+        # 動画スレッド（video_windowを渡す）
+        self.video_thread = VideoThread(self.video_window)
         self.video_thread.frame_ready.connect(self.video_window.frame_ready)
         self.video_thread.finished.connect(self.clear_video)
 
@@ -302,10 +319,11 @@ class EmotionApp(QWidget):
         _, buf = cv2.imencode('.jpg', small_frame)
         response = rekognition.detect_faces(Image={'Bytes': buf.tobytes()}, Attributes=['ALL'])
 
-        # カメラ画像の更新
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        h, w, ch = frame.shape
-        qimg = QImage(frame.data, w, h, ch * w, QImage.Format_RGB888)
+        # カメラ画像の更新（ラベルサイズに合わせてリサイズ）
+        frame_resized = cv2.resize(frame, (640, 480))
+        frame_resized = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
+        h, w, ch = frame_resized.shape
+        qimg = QImage(frame_resized.data, w, h, ch * w, QImage.Format_RGB888)
         self.camera_label.setPixmap(QPixmap.fromImage(qimg))
 
         # Rekognition で顔が検出されない場合の処理
@@ -342,9 +360,9 @@ class EmotionApp(QWidget):
                     self.display_image(IMAGE_BLACK)  # 黒画面を表示
                     self.last_audio_time = current_time
 
-    
+
     def display_image(self, image_path: str):
-        """画像を読み込み、16:10にリサイズして表示"""
+        """画像を読み込み、モニターの解像度に合わせてリサイズして表示"""
         import os
 
         abs_path = os.path.abspath(image_path)
@@ -357,8 +375,9 @@ class EmotionApp(QWidget):
             logger.error(f"Error: Unable to load image at {abs_path}")
             return
 
-        resized_image = cv2.resize(image, (WINDOW_WIDTH, WINDOW_HEIGHT))
-        
+        # モニターの実際の解像度に合わせてリサイズ
+        resized_image = cv2.resize(image, (self.video_window.window_width, self.video_window.window_height))
+
         # PyQt ウィジェットに表示
         h, w, ch = resized_image.shape
         qimg = QImage(resized_image.data, w, h, ch * w, QImage.Format_BGR888)
