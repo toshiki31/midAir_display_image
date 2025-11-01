@@ -252,14 +252,24 @@ class EmotionApp(QWidget):
         self.SILENT_SECONDS3 = 7
         self.SILENT_SECONDS4 = 9
 
+        # Rekognition用のカメラ設定
+        self.cap = cv2.VideoCapture(0)
+
+        # カメラの実際の解像度を取得してアスペクト比を計算
+        cam_width = int(self.cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        cam_height = int(self.cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        logger.info(f"Camera resolution: {cam_width}x{cam_height}")
+
+        # 幅640pxに固定し、アスペクト比を保った高さを計算
+        self.display_width = 640
+        self.display_height = int(self.display_width * cam_height / cam_width)
+        logger.info(f"Display size: {self.display_width}x{self.display_height}")
+
         self.camera_label = QLabel(self)
-        self.camera_label.setFixedSize(640, 480)
+        self.camera_label.setFixedSize(self.display_width, self.display_height)
         layout = QVBoxLayout()
         layout.addWidget(self.camera_label)
         self.setLayout(layout)
-
-        # Rekognition用のカメラ設定
-        self.cap = cv2.VideoCapture(0)
         self.timer = QTimer(self)
         self.timer.timeout.connect(self.update_camera)
 
@@ -319,8 +329,8 @@ class EmotionApp(QWidget):
         _, buf = cv2.imencode('.jpg', small_frame)
         response = rekognition.detect_faces(Image={'Bytes': buf.tobytes()}, Attributes=['ALL'])
 
-        # カメラ画像の更新（ラベルサイズに合わせてリサイズ）
-        frame_resized = cv2.resize(frame, (640, 480))
+        # カメラ画像の更新（アスペクト比を保ってリサイズ）
+        frame_resized = cv2.resize(frame, (self.display_width, self.display_height))
         frame_resized = cv2.cvtColor(frame_resized, cv2.COLOR_BGR2RGB)
         h, w, ch = frame_resized.shape
         qimg = QImage(frame_resized.data, w, h, ch * w, QImage.Format_RGB888)
