@@ -41,6 +41,72 @@ plt.rcParams['font.sans-serif'] = ['Hiragino Sans', 'Yu Gothic', 'Meirio']
 plt.rcParams['axes.unicode_minus'] = False
 
 
+def add_significance_brackets(ax, posthoc_df, x_positions, y_max, condition_order, height_increment=None):
+    """
+    Add significance brackets and asterisks to boxplot
+
+    Parameters:
+    - ax: matplotlib axis object
+    - posthoc_df: DataFrame with post-hoc test results (columns: 'A', 'B', 'p-corr')
+    - x_positions: dict mapping condition names to x-axis positions
+    - y_max: maximum y value for positioning brackets
+    - condition_order: list of condition names in order
+    - height_increment: spacing between bracket levels (auto if None)
+    """
+    if posthoc_df is None or len(posthoc_df) == 0:
+        return
+
+    # Filter significant comparisons
+    sig_comparisons = posthoc_df[posthoc_df['p-corr'] < 0.05].copy()
+
+    if len(sig_comparisons) == 0:
+        return
+
+    # Auto-calculate height increment if not provided
+    if height_increment is None:
+        y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
+        height_increment = y_range * 0.08
+
+    # Sort by distance between conditions (closer pairs drawn lower)
+    sig_comparisons['x1'] = sig_comparisons['A'].map(x_positions)
+    sig_comparisons['x2'] = sig_comparisons['B'].map(x_positions)
+    sig_comparisons['distance'] = abs(sig_comparisons['x2'] - sig_comparisons['x1'])
+    sig_comparisons = sig_comparisons.sort_values('distance')
+
+    # Draw brackets
+    for level, (idx, row) in enumerate(sig_comparisons.iterrows()):
+        x1 = row['x1']
+        x2 = row['x2']
+        p_val = row['p-corr']
+
+        # Determine significance level
+        if p_val < 0.001:
+            sig_symbol = '***'
+        elif p_val < 0.01:
+            sig_symbol = '**'
+        elif p_val < 0.05:
+            sig_symbol = '*'
+        else:
+            continue
+
+        # Calculate bracket height
+        bracket_height = y_max + height_increment * (level + 1)
+
+        # Draw bracket { }
+        bracket_y_offset = height_increment * 0.15
+        ax.plot([x1, x1], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x1, x2], [bracket_height, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x2, x2], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+
+        # Add asterisk
+        mid_x = (x1 + x2) / 2
+        ax.text(mid_x, bracket_height + height_increment * 0.1, sig_symbol,
+                ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
 class NASATLXAnalysis:
     """Class to analyze NASA-TLX data"""
 
@@ -313,7 +379,7 @@ class NASATLXAnalysis:
 
         return posthoc
 
-    def visualize_boxplot(self, output_dir):
+    def visualize_boxplot(self, output_dir, posthoc=None):
         """Create box plot"""
         print("\n" + "=" * 80)
         print("CREATING BOX PLOT")
@@ -329,7 +395,7 @@ class NASATLXAnalysis:
             x='distance',
             y='total_score',
             order=self.distance_order,
-            palette='RdYlGn',  # Red=high (bad), Green=low (good)
+            palette='Set2',  # Unified palette across all analyses
             ax=ax
         )
 
@@ -339,6 +405,18 @@ class NASATLXAnalysis:
         ax.set_ylabel('NASA-TLX Total Score (0-100)', fontsize=12)
         ax.set_ylim(-5, 105)
         ax.grid(True, alpha=0.3, axis='y')
+
+        # Add significance brackets if post-hoc results provided
+        if posthoc is not None:
+            # Get y-axis maximum for bracket positioning
+            y_max = self.df_raw.groupby('distance')['total_score'].max().max()
+
+            # Create position mapping (distance -> x position)
+            x_positions = {dist: i for i, dist in enumerate(self.distance_order)}
+
+            # Add brackets
+            add_significance_brackets(ax, posthoc, x_positions, y_max,
+                                     self.distance_order, height_increment=8)
 
         plt.tight_layout()
         filename = "boxplot_nasatlx.png"
