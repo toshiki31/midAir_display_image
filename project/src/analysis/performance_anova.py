@@ -29,6 +29,72 @@ plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['font.size'] = 10
 
 
+def add_significance_brackets(ax, posthoc_df, x_positions, y_max, condition_order, height_increment=None):
+    """
+    Add significance brackets and asterisks to boxplot
+
+    Parameters:
+    - ax: matplotlib axis object
+    - posthoc_df: DataFrame with post-hoc test results (columns: 'A', 'B', 'p-corr')
+    - x_positions: dict mapping condition names to x-axis positions
+    - y_max: maximum y value for positioning brackets
+    - condition_order: list of condition names in order
+    - height_increment: spacing between bracket levels (auto if None)
+    """
+    if posthoc_df is None or len(posthoc_df) == 0:
+        return
+
+    # Filter significant comparisons
+    sig_comparisons = posthoc_df[posthoc_df['p-corr'] < 0.05].copy()
+
+    if len(sig_comparisons) == 0:
+        return
+
+    # Auto-calculate height increment if not provided
+    if height_increment is None:
+        y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
+        height_increment = y_range * 0.08
+
+    # Sort by distance between conditions (closer pairs drawn lower)
+    sig_comparisons['x1'] = sig_comparisons['A'].map(x_positions)
+    sig_comparisons['x2'] = sig_comparisons['B'].map(x_positions)
+    sig_comparisons['distance'] = abs(sig_comparisons['x2'] - sig_comparisons['x1'])
+    sig_comparisons = sig_comparisons.sort_values('distance')
+
+    # Draw brackets
+    for level, (idx, row) in enumerate(sig_comparisons.iterrows()):
+        x1 = row['x1']
+        x2 = row['x2']
+        p_val = row['p-corr']
+
+        # Determine significance level
+        if p_val < 0.001:
+            sig_symbol = '***'
+        elif p_val < 0.01:
+            sig_symbol = '**'
+        elif p_val < 0.05:
+            sig_symbol = '*'
+        else:
+            continue
+
+        # Calculate bracket height
+        bracket_height = y_max + height_increment * (level + 1)
+
+        # Draw bracket { }
+        bracket_y_offset = height_increment * 0.15
+        ax.plot([x1, x1], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x1, x2], [bracket_height, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x2, x2], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+
+        # Add asterisk
+        mid_x = (x1 + x2) / 2
+        ax.text(mid_x, bracket_height + height_increment * 0.1, sig_symbol,
+                ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
 class PerformanceANOVA:
     """Class to perform repeated measures ANOVA analysis on performance data"""
 
@@ -52,7 +118,13 @@ class PerformanceANOVA:
         print("=" * 80)
 
         self.df_raw = pd.read_csv(self.csv_path)
-        print(f"\nRaw data shape: {self.df_raw.shape}")
+
+        # Exclude taninaka (outlier) - filter by name containing 'taninaka' or '谷中'
+        original_shape = self.df_raw.shape
+        self.df_raw = self.df_raw[~self.df_raw['name'].str.contains('taninaka|谷中', case=False, na=False)]
+        excluded_count = original_shape[0] - self.df_raw.shape[0]
+
+        print(f"\nRaw data shape: {self.df_raw.shape} (excluded {excluded_count} rows for taninaka/谷中)")
         print(f"Columns: {list(self.df_raw.columns)}")
         print(f"\nFirst few rows:")
         print(self.df_raw.head(10))
@@ -284,7 +356,7 @@ class PerformanceANOVA:
 
         return posthoc
 
-    def visualize_data(self, df, analysis_name, output_dir):
+    def visualize_data(self, df, analysis_name, output_dir, posthoc=None):
         """
         Create visualizations for the data
 
@@ -292,6 +364,7 @@ class PerformanceANOVA:
             df: DataFrame in long format
             analysis_name: Name of the analysis for file naming
             output_dir: Directory to save plots
+            posthoc: Post-hoc test results DataFrame (optional)
         """
         print("\n" + "=" * 80)
         print(f"CREATING VISUALIZATIONS - {analysis_name}")
@@ -324,6 +397,16 @@ class PerformanceANOVA:
         axes[0].set_xlabel('Distance Condition', fontsize=12)
         axes[0].set_ylabel('Performance', fontsize=12)
         axes[0].grid(True, alpha=0.3)
+
+        # Add significance brackets if post-hoc results provided
+        if posthoc is not None:
+            # Map distance labels back to original condition labels for posthoc matching
+            reverse_condition_labels = {v: k for k, v in condition_labels.items()}
+            y_max = df_plot.groupby('distance')['performance'].max().max()
+            x_positions = {reverse_condition_labels[dist]: i for i, dist in enumerate(distance_order)}
+            add_significance_brackets(axes[0], posthoc, x_positions, y_max,
+                                     [reverse_condition_labels[d] for d in distance_order],
+                                     height_increment=1.0)
 
         # Violin plot
         sns.violinplot(data=df_plot, x='distance', y='performance', ax=axes[1],
@@ -472,7 +555,7 @@ class PerformanceANOVA:
 
         # Visualizations
         output_dir = Path(self.csv_path).parent / "anova_results" / "analysis1_averaged"
-        self.visualize_data(self.df_long_averaged, "Analysis 1 Averaged", output_dir)
+        self.visualize_data(self.df_long_averaged, "Analysis 1 Averaged", output_dir, posthoc=posthoc)
 
         return {
             'descriptive': desc,
@@ -509,7 +592,7 @@ class PerformanceANOVA:
 
         # Visualizations
         output_dir = Path(self.csv_path).parent / "anova_results" / "analysis2_all_trials"
-        self.visualize_data(self.df_long_all, "Analysis 2 All Trials", output_dir)
+        self.visualize_data(self.df_long_all, "Analysis 2 All Trials", output_dir, posthoc=posthoc)
 
         return {
             'descriptive': desc,

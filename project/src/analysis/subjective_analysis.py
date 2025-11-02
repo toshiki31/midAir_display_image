@@ -38,6 +38,72 @@ plt.rcParams['font.sans-serif'] = ['Hiragino Sans', 'Yu Gothic', 'Meirio', 'Taka
 plt.rcParams['axes.unicode_minus'] = False
 
 
+def add_significance_brackets(ax, posthoc_df, x_positions, y_max, condition_order, height_increment=None):
+    """
+    Add significance brackets and asterisks to boxplot
+
+    Parameters:
+    - ax: matplotlib axis object
+    - posthoc_df: DataFrame with post-hoc test results (columns: 'A', 'B', 'p-corr')
+    - x_positions: dict mapping condition names to x-axis positions
+    - y_max: maximum y value for positioning brackets
+    - condition_order: list of condition names in order
+    - height_increment: spacing between bracket levels (auto if None)
+    """
+    if posthoc_df is None or len(posthoc_df) == 0:
+        return
+
+    # Filter significant comparisons
+    sig_comparisons = posthoc_df[posthoc_df['p-corr'] < 0.05].copy()
+
+    if len(sig_comparisons) == 0:
+        return
+
+    # Auto-calculate height increment if not provided
+    if height_increment is None:
+        y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
+        height_increment = y_range * 0.08
+
+    # Sort by distance between conditions (closer pairs drawn lower)
+    sig_comparisons['x1'] = sig_comparisons['A'].map(x_positions)
+    sig_comparisons['x2'] = sig_comparisons['B'].map(x_positions)
+    sig_comparisons['distance'] = abs(sig_comparisons['x2'] - sig_comparisons['x1'])
+    sig_comparisons = sig_comparisons.sort_values('distance')
+
+    # Draw brackets
+    for level, (idx, row) in enumerate(sig_comparisons.iterrows()):
+        x1 = row['x1']
+        x2 = row['x2']
+        p_val = row['p-corr']
+
+        # Determine significance level
+        if p_val < 0.001:
+            sig_symbol = '***'
+        elif p_val < 0.01:
+            sig_symbol = '**'
+        elif p_val < 0.05:
+            sig_symbol = '*'
+        else:
+            continue
+
+        # Calculate bracket height
+        bracket_height = y_max + height_increment * (level + 1)
+
+        # Draw bracket { }
+        bracket_y_offset = height_increment * 0.15
+        ax.plot([x1, x1], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x1, x2], [bracket_height, bracket_height],
+                'k-', linewidth=1.5)
+        ax.plot([x2, x2], [bracket_height - bracket_y_offset, bracket_height],
+                'k-', linewidth=1.5)
+
+        # Add asterisk
+        mid_x = (x1 + x2) / 2
+        ax.text(mid_x, bracket_height + height_increment * 0.1, sig_symbol,
+                ha='center', va='bottom', fontsize=10, fontweight='bold')
+
+
 class SubjectiveAnalysis:
     """Class to analyze subjective evaluation data with Likert scales"""
 
@@ -85,7 +151,15 @@ class SubjectiveAnalysis:
 
         # Read CSV
         self.df_raw = pd.read_csv(self.csv_path)
-        print(f"\nRaw data shape: {self.df_raw.shape}")
+
+        # Exclude taninaka (outlier) - filter by name column '氏名'
+        if '氏名' in self.df_raw.columns:
+            original_shape = self.df_raw.shape
+            self.df_raw = self.df_raw[~self.df_raw['氏名'].str.contains('taninaka|谷中', case=False, na=False)]
+            excluded_count = original_shape[0] - self.df_raw.shape[0]
+            print(f"\nRaw data shape: {self.df_raw.shape} (excluded {excluded_count} rows for taninaka/谷中)")
+        else:
+            print(f"\nRaw data shape: {self.df_raw.shape}")
 
         # Extract relevant columns
         # Column 3: condition, Columns 4-9: evaluation items
@@ -342,8 +416,13 @@ class SubjectiveAnalysis:
 
         return df_friedman, posthoc_results
 
-    def visualize_boxplots(self, output_dir):
-        """Create box plots for each evaluation item"""
+    def visualize_boxplots(self, output_dir, posthoc_results=None):
+        """Create box plots for each evaluation item
+
+        Args:
+            output_dir: Directory to save plots
+            posthoc_results: Dictionary mapping item names to posthoc DataFrames (optional)
+        """
         print("\n" + "=" * 80)
         print("CREATING BOX PLOTS")
         print("=" * 80)
@@ -373,6 +452,13 @@ class SubjectiveAnalysis:
             axes[idx].set_ylabel('Rating (1-7)', fontsize=10)
             axes[idx].set_ylim(0.5, 7.5)
             axes[idx].grid(True, alpha=0.3, axis='y')
+
+            # Add significance brackets if post-hoc results provided
+            if posthoc_results is not None and item in posthoc_results and posthoc_results[item] is not None:
+                y_max = item_data.groupby('distance')['rating'].max().max()
+                x_positions = {dist: i for i, dist in enumerate(self.distance_order)}
+                add_significance_brackets(axes[idx], posthoc_results[item], x_positions, y_max,
+                                         self.distance_order, height_increment=0.4)
 
         plt.tight_layout()
         filename = "boxplots_all_items.png"
@@ -602,7 +688,7 @@ class SubjectiveAnalysis:
 
         # Visualizations
         output_dir = Path(self.csv_path).parent / "subjective_results" / "visualizations"
-        self.visualize_boxplots(output_dir)
+        self.visualize_boxplots(output_dir, posthoc_results=posthoc)
         self.visualize_heatmap(output_dir)
         self.visualize_stacked_bar(output_dir)
         self.visualize_profile(output_dir)
