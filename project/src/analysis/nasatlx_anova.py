@@ -406,35 +406,27 @@ class NASATLXAnova:
         output_dir = Path(output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
 
-        # 1. Box plot and violin plot combined
-        fig, axes = plt.subplots(1, 2, figsize=(16, 6))
+        # 1. Box plot
+        fig, ax = plt.subplots(figsize=(10, 6))
 
         # Box plot
-        sns.boxplot(data=self.df_raw, x='distance', y='total_score', ax=axes[0],
+        sns.boxplot(data=self.df_raw, x='distance', y='total_score', ax=ax,
                    palette='Set2', order=self.distance_order)
-        axes[0].set_title('NASA-TLX Box Plot\n(Lower score = better)',
+        ax.set_title('NASA-TLX',
                          fontsize=14, fontweight='bold')
-        axes[0].set_xlabel('Distance Condition', fontsize=12)
-        axes[0].set_ylabel('NASA-TLX Total Score (0-100)', fontsize=12)
-        axes[0].grid(True, alpha=0.3)
+        ax.set_xlabel('Distance Condition', fontsize=12)
+        ax.set_ylabel('NASA-TLX Total Score (0-100)', fontsize=12)
+        ax.grid(True, alpha=0.3)
 
         # Add significance brackets if post-hoc results provided
         if posthoc is not None:
             y_max = self.df_raw.groupby('distance')['total_score'].max().max()
             x_positions = {dist: i for i, dist in enumerate(self.distance_order)}
-            add_significance_brackets(axes[0], posthoc, x_positions, y_max,
+            add_significance_brackets(ax, posthoc, x_positions, y_max,
                                      self.distance_order, height_increment=5.0)
 
-        # Violin plot
-        sns.violinplot(data=self.df_raw, x='distance', y='total_score', ax=axes[1],
-                      palette='Set2', order=self.distance_order)
-        axes[1].set_title('NASA-TLX Violin Plot', fontsize=14, fontweight='bold')
-        axes[1].set_xlabel('Distance Condition', fontsize=12)
-        axes[1].set_ylabel('NASA-TLX Total Score (0-100)', fontsize=12)
-        axes[1].grid(True, alpha=0.3)
-
         plt.tight_layout()
-        filename = "boxplot_violin_anova.png"
+        filename = "boxplot_anova.png"
         plt.savefig(output_dir / filename, dpi=300, bbox_inches='tight')
         print(f"\n✓ Saved: {filename}")
         plt.close()

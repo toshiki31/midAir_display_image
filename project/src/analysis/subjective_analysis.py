@@ -434,6 +434,16 @@ class SubjectiveAnalysis:
         fig, axes = plt.subplots(2, 3, figsize=(18, 12))
         axes = axes.flatten()
 
+        # Custom titles for each evaluation item
+        custom_titles = {
+            'Readability': '吹き出しの読みやすさ\n（1: 読みにくい、 7: 読みやすい）',
+            'Eye_strain': '目のしょぼつき\n（1: 目がしょぼつかない、 7: 目がしょぼつく）',
+            'Eye_fatigue': '目の疲れ\n（1: 目が疲れない、 7: 目が疲れる）',
+            'Eye_pain': '目の痛み\n（1: 目が痛い、 7: 目が痛くない）',
+            'Eye_dryness': '目のかわき\n（1: 目がかわかない、 7: 目がかわく）',
+            'Blurred_vision': 'ものがぼやけ\n（1: ぼやけて見えない、 7: ぼやけて見える）'
+        }
+
         for idx, item in enumerate(self.eval_items.values()):
             item_data = self.df_long[self.df_long['evaluation_item'] == item]
 
@@ -446,7 +456,7 @@ class SubjectiveAnalysis:
                 ax=axes[idx]
             )
 
-            axes[idx].set_title(f'{item}\n({self.eval_items_jp[item]})',
+            axes[idx].set_title(custom_titles[item],
                               fontsize=12, fontweight='bold')
             axes[idx].set_xlabel('Distance', fontsize=10)
             axes[idx].set_ylabel('Rating (1-7)', fontsize=10)

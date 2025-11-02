@@ -367,7 +367,7 @@ class FriedmanAnalysis:
                    palette='Set2', showmeans=True, order=distance_order,
                    meanprops={'marker': 'D', 'markerfacecolor': 'red', 'markersize': 8})
 
-        ax.set_title(f'Box Plot - {analysis_name}\n(Red diamond = mean, line = median)',
+        ax.set_title(f'Performance\n(Red diamond = mean, line = median)',
                     fontsize=14, fontweight='bold')
         ax.set_xlabel('Condition', fontsize=12)
         ax.set_ylabel('Performance', fontsize=12)
