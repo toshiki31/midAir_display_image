@@ -411,8 +411,9 @@ class NASATLXAnova:
 
         # Box plot
         sns.boxplot(data=self.df_raw, x='distance', y='total_score', ax=ax,
-                   palette='Set2', order=self.distance_order)
-        ax.set_title('NASA-TLX',
+                   palette='Set2', order=self.distance_order, showmeans=True,
+                   meanprops={'marker': 'D', 'markerfacecolor': 'red', 'markersize': 8})
+        ax.set_title('NASA-TLX\n(Red diamond = mean, line = median)',
                          fontsize=14, fontweight='bold')
         ax.set_xlabel('Distance Condition', fontsize=12)
         ax.set_ylabel('NASA-TLX Total Score (0-100)', fontsize=12)
