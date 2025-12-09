@@ -131,7 +131,7 @@ class FriedmanAnalysis:
 
         self.df_raw = pd.read_csv(self.csv_path)
 
-        # Exclude taninaka (outlier) - filter by name containing 'taninaka' or '谷中'
+        # 全参加者を表示するならここをコメントアウト：Exclude taninaka (outlier) - filter by name containing 'taninaka' or '谷中'
         original_shape = self.df_raw.shape
         self.df_raw = self.df_raw[~self.df_raw[self.subject_col].str.contains('taninaka|谷中', case=False, na=False)]
         excluded_count = original_shape[0] - self.df_raw.shape[0]
@@ -140,6 +140,7 @@ class FriedmanAnalysis:
         print(f"Columns: {list(self.df_raw.columns)}")
         print(f"\nFirst few rows:")
         print(self.df_raw.head(10))
+        # ここまでコメントアウト =========================
 
         # Basic info
         print(f"\nNumber of participants: {self.df_raw[self.subject_col].nunique()}")
@@ -367,7 +368,7 @@ class FriedmanAnalysis:
                    palette='Set2', showmeans=True, order=distance_order,
                    meanprops={'marker': 'D', 'markerfacecolor': 'red', 'markersize': 8})
 
-        ax.set_title(f'Box Plot - {analysis_name}\n(Red diamond = mean, line = median)',
+        ax.set_title(f'Performance\n(Red diamond = mean, line = median)',
                     fontsize=14, fontweight='bold')
         ax.set_xlabel('Condition', fontsize=12)
         ax.set_ylabel('Performance', fontsize=12)
