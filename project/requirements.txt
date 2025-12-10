@@ -24,3 +24,7 @@ s3transfer==0.10.2
 screeninfo==0.8.1
 six==1.16.0
 urllib3==2.2.3
+flask==3.0.0
+flask-socketio==5.3.5
+python-socketio==5.10.0
+eventlet==0.35.2
