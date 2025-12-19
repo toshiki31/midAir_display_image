@@ -1,474 +1,641 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>Speech Bubble Display</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            background-color: black;
-            overflow: hidden;
-            width: 100vw;
-            height: 100vh;
-            position: relative;
-        }
+      body {
+        background-color: black;
+        overflow: hidden;
+        width: 100vw;
+        height: 100vh;
+        position: relative;
+      }
 
-        #container {
-            position: relative;
-            width: 100%;
-            height: 100%;
-        }
+      #container {
+        position: relative;
+        width: 100%;
+        height: 100%;
+      }
 
-        #bubble-image {
-            position: absolute;
-            width: 100%;
-            height: auto;
-            left: 0;
-            top: 0;
-            opacity: 0;
-            transition: opacity 0.3s ease, top 0.2s ease;
-        }
+      #bubble-image {
+        position: absolute;
+        width: 100%;
+        height: auto;
+        left: 0;
+        top: 0;
+        opacity: 0;
+        transition: opacity 0.3s ease, top 0.2s ease;
+      }
 
-        #bubble-image.visible {
-            opacity: 1;
-        }
+      #bubble-image.visible {
+        opacity: 1;
+      }
 
-        #text-container {
-            position: absolute;
-            width: 85%;
-            left: 7.5%;
-            top: 40%;
-            transform: translateY(-50%);
-            text-align: center;
-            padding: 20px 30px;
-            opacity: 0;
-            transition: opacity 0.3s ease, top 0.2s ease;
-        }
+      #text-container {
+        position: absolute;
+        width: 85%;
+        left: 7.5%;
+        top: 40%;
+        transform: translateY(-50%);
+        text-align: center;
+        padding: 20px 30px;
+        opacity: 0;
+        transition: opacity 0.3s ease, top 0.2s ease;
+      }
 
-        #text-container.visible {
-            opacity: 1;
-        }
+      #text-container.visible {
+        opacity: 1;
+      }
 
-        #text {
-            font-family: 'Hiragino Kaku Gothic ProN', 'Arial', sans-serif;
-            font-size: 8vw;
-            font-weight: bold;
-            color: black;
-            word-wrap: break-word;
-            line-height: 1.1;
-        }
+      #text {
+        font-family: "Hiragino Kaku Gothic ProN", "Arial", sans-serif;
+        font-size: 8vw;
+        font-weight: bold;
+        color: black;
+        word-wrap: break-word;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        line-height: 1.1;
+      }
 
-        #connection-status {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            padding: 5px 10px;
-            background-color: rgba(255, 255, 255, 0.8);
-            border-radius: 5px;
-            font-size: 12px;
-            z-index: 1000;
-        }
+      #connection-status {
+        position: fixed;
+        top: 10px;
+        right: 10px;
+        padding: 5px 10px;
+        background-color: rgba(255, 255, 255, 0.8);
+        border-radius: 5px;
+        font-size: 12px;
+        z-index: 1000;
+      }
 
-        #connection-status.connected {
-            color: green;
-        }
+      #connection-status.connected {
+        color: green;
+      }
 
-        #connection-status.disconnected {
-            color: red;
-        }
+      #connection-status.disconnected {
+        color: red;
+      }
 
-        /* Language Selection Modal */
-        #language-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background-color: rgba(0, 0, 0, 0.95);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 2000;
-        }
+      /* Language Selection Modal */
+      #language-modal {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(0, 0, 0, 0.95);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 2000;
+      }
 
-        #language-modal.hidden {
-            display: none;
-        }
+      #language-modal.hidden {
+        display: none;
+      }
 
-        .modal-content {
-            background-color: white;
-            padding: 40px 30px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-        }
+      .modal-content {
+        background-color: white;
+        padding: 40px 30px;
+        border-radius: 20px;
+        max-width: 500px;
+        width: 90%;
+        text-align: center;
+      }
 
-        .modal-content h2 {
-            color: #333;
-            margin-bottom: 30px;
-            font-size: 24px;
-        }
+      .modal-content h2 {
+        color: #333;
+        margin-bottom: 30px;
+        font-size: 24px;
+      }
 
-        .language-selector {
-            margin-bottom: 25px;
-            text-align: left;
-        }
+      .language-selector {
+        margin-bottom: 25px;
+        text-align: left;
+      }
 
-        .language-selector label {
-            display: block;
-            color: #666;
-            margin-bottom: 8px;
-            font-size: 16px;
-            font-weight: 500;
-        }
+      .language-selector label {
+        display: block;
+        color: #666;
+        margin-bottom: 8px;
+        font-size: 16px;
+        font-weight: 500;
+      }
 
-        .language-selector select {
-            width: 100%;
-            padding: 15px;
-            font-size: 18px;
-            border: 2px solid #ddd;
-            border-radius: 10px;
-            background-color: white;
-            color: #333;
-            cursor: pointer;
-        }
+      .language-selector select {
+        width: 100%;
+        padding: 15px;
+        font-size: 18px;
+        border: 2px solid #ddd;
+        border-radius: 10px;
+        background-color: white;
+        color: #333;
+        cursor: pointer;
+      }
 
-        .language-selector select:focus {
-            outline: none;
-            border-color: #4CAF50;
-        }
+      .language-selector select:focus {
+        outline: none;
+        border-color: #4caf50;
+      }
 
-        #start-button {
-            width: 100%;
-            padding: 18px;
-            font-size: 20px;
-            font-weight: bold;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            cursor: pointer;
-            margin-top: 20px;
-            transition: background-color 0.3s;
-        }
+      #start-button {
+        width: 100%;
+        padding: 18px;
+        font-size: 20px;
+        font-weight: bold;
+        background-color: #4caf50;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        margin-top: 20px;
+        transition: background-color 0.3s;
+      }
 
-        #start-button:hover {
-            background-color: #45a049;
-        }
+      #start-button:hover {
+        background-color: #45a049;
+      }
 
-        #start-button:active {
-            background-color: #3d8b40;
-        }
+      #start-button:active {
+        background-color: #3d8b40;
+      }
 
-        #start-button:disabled {
-            background-color: #ccc;
-            cursor: not-allowed;
-        }
+      #start-button:disabled {
+        background-color: #ccc;
+        cursor: not-allowed;
+      }
 
-        .loading-message {
-            display: none;
-            color: #666;
-            margin-top: 15px;
-            font-size: 16px;
-        }
+      .loading-message {
+        display: none;
+        color: #666;
+        margin-top: 15px;
+        font-size: 16px;
+      }
 
-        .loading-message.visible {
-            display: block;
-        }
+      .loading-message.visible {
+        display: block;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <!-- Language Selection Modal -->
     <div id="language-modal">
-        <div class="modal-content">
-            <h2>🌐 言語設定</h2>
+      <div class="modal-content">
+        <h2>🌐 言語設定</h2>
 
-            <div class="language-selector">
-                <label for="source-lang">翻訳元言語:</label>
-                <select id="source-lang">
-                    <option value="ja-JP">日本語</option>
-                    <option value="en-US">English</option>
-                    <option value="zh-CN">中文（简体）</option>
-                    <option value="zh-TW">中文（繁體）</option>
-                    <option value="ko-KR">한국어</option>
-                    <option value="fr-FR">Français</option>
-                    <option value="de-DE">Deutsch</option>
-                    <option value="es-ES">Español</option>
-                </select>
-            </div>
-
-            <div class="language-selector">
-                <label for="target-lang">翻訳先言語:</label>
-                <select id="target-lang">
-                    <option value="en-US" selected>English</option>
-                    <option value="ja-JP">日本語</option>
-                    <option value="zh-CN">中文（简体）</option>
-                    <option value="zh-TW">中文（繁體）</option>
-                    <option value="ko-KR">한국어</option>
-                    <option value="fr-FR">Français</option>
-                    <option value="de-DE">Deutsch</option>
-                    <option value="es-ES">Español</option>
-                </select>
-            </div>
-
-            <button id="start-button">システムを開始</button>
-            <div class="loading-message" id="loading-message">システムを起動中...</div>
+        <div class="language-selector">
+          <label for="source-lang">翻訳元言語:</label>
+          <select id="source-lang">
+            <option value="ja-JP">日本語</option>
+            <option value="en-US">English</option>
+            <option value="zh-CN">中文（简体）</option>
+            <option value="zh-TW">中文（繁體）</option>
+            <option value="ko-KR">한국어</option>
+            <option value="fr-FR">Français</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="es-ES">Español</option>
+          </select>
         </div>
+
+        <div class="language-selector">
+          <label for="target-lang">翻訳先言語:</label>
+          <select id="target-lang">
+            <option value="en-US" selected>English</option>
+            <option value="ja-JP">日本語</option>
+            <option value="zh-CN">中文（简体）</option>
+            <option value="zh-TW">中文（繁體）</option>
+            <option value="ko-KR">한국어</option>
+            <option value="fr-FR">Français</option>
+            <option value="de-DE">Deutsch</option>
+            <option value="es-ES">Español</option>
+          </select>
+        </div>
+
+        <button id="start-button">システムを開始</button>
+        <div class="loading-message" id="loading-message">
+          システムを起動中...
+        </div>
+      </div>
     </div>
 
     <div id="connection-status" class="disconnected">接続中...</div>
     <div id="container">
-        <img id="bubble-image" src="/static/images/speech-bubble1.png" alt="Speech Bubble">
-        <div id="text-container">
-            <div id="text"></div>
-        </div>
+      <img
+        id="bubble-image"
+        src="/static/images/speech-bubble1.png"
+        alt="Speech Bubble"
+      />
+      <div id="text-container">
+        <div id="text"></div>
+      </div>
     </div>
 
     <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
     <script>
-        const socket = io();
-        const bubbleImage = document.getElementById('bubble-image');
-        const textContainer = document.getElementById('text-container');
-        const textElement = document.getElementById('text');
-        const statusElement = document.getElementById('connection-status');
+      const socket = io();
+      const bubbleImage = document.getElementById("bubble-image");
+      const textContainer = document.getElementById("text-container");
+      const textElement = document.getElementById("text");
+      const statusElement = document.getElementById("connection-status");
 
-        let bubbleImageHeight = 0;
-        let containerHeight = window.innerHeight;
-        let currentText = '';
+      let bubbleImageHeight = 0;
+      let containerHeight = window.innerHeight;
+      let currentText = "";
 
-        // デバイス別の最小フォントサイズ設定
-        const MIN_FONT_SIZE_DESKTOP = 100;  // PC: 100px
-        const MIN_FONT_SIZE_MOBILE = 18;    // スマホ: 18px (Apple HIG, Material Design, WCAG準拠)
-        const MOBILE_BREAKPOINT = 768;      // 768px以下をモバイルと判定
+      // デバイス別のフォントサイズ設定
+      const MIN_FONT_SIZE_DESKTOP = 100; // PC: 100px
+      const FIXED_FONT_SIZE_MOBILE = 28; // スマホ: 28px固定
+      const MOBILE_BREAKPOINT = 768; // 768px以下をモバイルと判定
 
-        /**
-         * デバイスがモバイルかどうかを判定
-         */
-        function isMobile() {
-            return window.innerWidth <= MOBILE_BREAKPOINT;
+      /**
+       * デバイスがモバイルかどうかを判定
+       */
+      function isMobile() {
+        return window.innerWidth <= MOBILE_BREAKPOINT;
+      }
+
+      /**
+       * テキストの長さに応じて最適なフォントサイズを計算
+       */
+      function calculateFontSize(text) {
+        // モバイルの場合は固定サイズ
+        if (isMobile()) {
+          return FIXED_FONT_SIZE_MOBILE;
         }
 
-        /**
-         * テキストの長さに応じて最適なフォントサイズを計算
-         */
-        function calculateFontSize(text) {
-            const textLength = text.length;
-            const minSize = isMobile() ? MIN_FONT_SIZE_MOBILE : MIN_FONT_SIZE_DESKTOP;
+        // デスクトップの場合は文字数に応じて調整
+        const textLength = text.length;
+        let fontSize;
 
-            let fontSize;
-
-            // 文字数に応じて段階的に調整
-            if (textLength <= 20) {
-                // 短文: 8vw
-                fontSize = Math.max(window.innerWidth * 0.08, minSize);
-            } else if (textLength <= 40) {
-                // 中文: 6vw
-                fontSize = Math.max(window.innerWidth * 0.06, minSize);
-            } else if (textLength <= 60) {
-                // 長文: 5vw
-                fontSize = Math.max(window.innerWidth * 0.05, minSize);
-            } else {
-                // 超長文: 最小サイズ固定
-                fontSize = minSize;
-            }
-
-            return fontSize;
+        if (textLength <= 20) {
+          // 短文: 8vw
+          fontSize = Math.max(window.innerWidth * 0.08, MIN_FONT_SIZE_DESKTOP);
+        } else if (textLength <= 40) {
+          // 中文: 6vw
+          fontSize = Math.max(window.innerWidth * 0.06, MIN_FONT_SIZE_DESKTOP);
+        } else if (textLength <= 60) {
+          // 長文: 5vw
+          fontSize = Math.max(window.innerWidth * 0.05, MIN_FONT_SIZE_DESKTOP);
+        } else {
+          // 超長文: 最小サイズ固定
+          fontSize = MIN_FONT_SIZE_DESKTOP;
         }
 
-        /**
-         * テキストの行数を計算
-         */
-        function getLineCount() {
-            // テキスト要素の高さをフォントサイズで割って行数を計算
-            const lineHeight = parseFloat(window.getComputedStyle(textElement).lineHeight);
-            const textHeight = textElement.offsetHeight;
-            const lines = Math.round(textHeight / lineHeight);
-            return lines;
+        return fontSize;
+      }
+
+      /**
+       * テキストの行数を計算
+       */
+      function getLineCount() {
+        // テキスト要素の高さをフォントサイズで割って行数を計算
+        const computedStyle = window.getComputedStyle(textElement);
+        const lineHeight = parseFloat(computedStyle.lineHeight);
+        const textHeight = textElement.offsetHeight;
+        // 最小1行を保証し、切り上げで計算
+        const lines = Math.max(1, Math.ceil(textHeight / lineHeight));
+        return lines;
+      }
+
+      /**
+       * 行数に応じて適切な吹き出し画像を選択
+       */
+      function selectBubbleImage(lines) {
+        if (lines <= 1) {
+          return "/static/images/speech-bubble1.png"; // 1行用
+        } else if (lines === 2) {
+          return "/static/images/speech-bubble2.png"; // 2行用
+        } else {
+          return "/static/images/speech-bubble3.png"; // 3行以上用
+        }
+      }
+
+      /**
+       * テキストが最大行数を超える場合、句読点で切り詰める
+       * 最新の完結した文を優先して表示
+       */
+      function truncateTextToMaxLines(text) {
+        const MAX_LINES = 3;
+
+        if (!text || text.length === 0) {
+          return "";
         }
 
-        /**
-         * 行数に応じて適切な吹き出し画像を選択
-         */
-        function selectBubbleImage(lines) {
-            if (lines <= 1) {
-                return '/static/images/speech-bubble1.png';  // 1行用
-            } else if (lines === 2) {
-                return '/static/images/speech-bubble2.png';  // 2行用
-            } else {
-                return '/static/images/speech-bubble3.png';  // 3行以上用
-            }
+        // 一時的にテキストを設定して行数を測定
+        textElement.textContent = text;
+
+        // すでに制限内であればそのまま返す
+        const lineCount = getLineCount();
+        if (lineCount <= MAX_LINES) {
+          return text;
         }
 
-        /**
-         * テキストのフォントサイズを更新し、吹き出し画像を切り替える
-         */
-        function updateFontSize(text) {
-            const fontSize = calculateFontSize(text);
-            textElement.style.fontSize = fontSize + 'px';
+        console.log(
+          `Text overflow: ${lineCount} lines > ${MAX_LINES}. Truncating...`
+        );
 
-            // 次のフレームで行数を計算（DOMが更新された後）
-            requestAnimationFrame(() => {
-                const lines = getLineCount();
-                const newBubbleImage = selectBubbleImage(lines);
+        // 句読点のパターン（日本語と英語）
+        const punctuationMarks = [
+          "。",
+          "！",
+          "？",
+          "．",
+          ".",
+          "!",
+          "?",
+          "、",
+          ",",
+        ];
 
-                // 吹き出し画像を切り替え
-                if (bubbleImage.src !== window.location.origin + newBubbleImage) {
-                    bubbleImage.src = newBubbleImage;
-                    console.log(`Switched to: ${newBubbleImage} (${lines} lines)`);
-                }
+        // 後ろから句読点を探して、そこで切り詰める
+        let truncatedText = text;
+        let foundPunctuation = false;
 
-                console.log(`Text length: ${text.length}, Font size: ${fontSize}px, Lines: ${lines}, Device: ${isMobile() ? 'Mobile' : 'Desktop'}`);
-            });
+        // 各句読点の位置を探す
+        for (let pos = text.length - 1; pos >= 0; pos--) {
+          const char = text[pos];
+
+          // 句読点が見つかったら、その直後までを取得
+          if (punctuationMarks.includes(char)) {
+            truncatedText = text.substring(pos + 1).trim();
+
+            // 空文字列の場合はスキップ
+            if (truncatedText.length === 0) {
+              continue;
+            }
+
+            // 行数を測定
+            textElement.textContent = truncatedText;
+            const lines = getLineCount();
+
+            if (lines <= MAX_LINES) {
+              foundPunctuation = true;
+              console.log(
+                `Truncated at punctuation '${char}' (position ${pos}). Result: "${truncatedText}"`
+              );
+              return truncatedText;
+            }
+            // まだ長すぎる場合は、さらに前の句読点を探す
+          }
         }
 
-        // 画像の高さを取得（画像が読み込まれるたびに更新）
-        bubbleImage.onload = function() {
-            bubbleImageHeight = bubbleImage.offsetHeight;
-            // 現在の位置でテキスト位置を更新
-            const currentY = parseInt(bubbleImage.style.top) || 0;
-            updateTextPosition(currentY);
-            console.log(`Bubble image loaded. Height: ${bubbleImageHeight}px`);
-        };
+        // 句読点で切れなかった場合、文字単位で切り詰める（フォールバック）
+        if (!foundPunctuation) {
+          console.log(
+            "No suitable punctuation found. Using character-based truncation..."
+          );
+          for (let i = 1; i < text.length; i++) {
+            truncatedText = text.substring(i);
+            textElement.textContent = truncatedText;
 
-        // 接続状態の管理
-        socket.on('connect', () => {
-            console.log('Connected to server');
-            statusElement.textContent = '接続済み';
-            statusElement.className = 'connected';
-            setTimeout(() => {
-                statusElement.style.display = 'none';
-            }, 2000);
-        });
-
-        socket.on('disconnect', () => {
-            console.log('Disconnected from server');
-            statusElement.textContent = '接続切断';
-            statusElement.className = 'disconnected';
-            statusElement.style.display = 'block';
-        });
-
-        // テキスト更新イベント
-        socket.on('update_text', (data) => {
-            console.log('Received text:', data.text);
-            currentText = data.text;
-            textElement.textContent = data.text;
-
-            // フォントサイズを自動調整
-            updateFontSize(data.text);
-
-            bubbleImage.classList.add('visible');
-            textContainer.classList.add('visible');
-        });
-
-        // 位置更新イベント
-        socket.on('update_position', (data) => {
-            console.log('Received position:', data.y);
-            updateTextPosition(data.y);
-        });
-
-        // 非表示イベント
-        socket.on('hide_bubble', () => {
-            console.log('Hiding bubble');
-            bubbleImage.classList.remove('visible');
-            textContainer.classList.remove('visible');
-        });
-
-        // 表示イベント
-        socket.on('show_bubble', () => {
-            console.log('Showing bubble');
-            bubbleImage.classList.add('visible');
-            textContainer.classList.add('visible');
-        });
-
-        // 位置更新関数
-        function updateTextPosition(newY) {
-            bubbleImage.style.top = newY + 'px';
-
-            // 吹き出し画像の種類に応じてテキスト位置を調整
-            let textYOffset;
-            if (bubbleImage.src.includes('speech-bubble2.png')) {
-                // 2行用: 中央
-                textYOffset = bubbleImageHeight / 2;
-            } else if (bubbleImage.src.includes('speech-bubble3.png')) {
-                // 3行以上用: 中央
-                textYOffset = bubbleImageHeight / 2;
-            } else {
-                // 1行用: 少し上（40%の位置）
-                textYOffset = bubbleImageHeight * 0.4;
+            if (getLineCount() <= MAX_LINES) {
+              console.log(`Truncated ${i} chars from beginning`);
+              return truncatedText;
             }
-
-            const textY = newY + textYOffset;
-            textContainer.style.top = textY + 'px';
+          }
         }
 
-        // ウィンドウリサイズ対応
-        window.addEventListener('resize', () => {
-            containerHeight = window.innerHeight;
-            if (bubbleImage.complete) {
-                bubbleImageHeight = bubbleImage.offsetHeight;
-            }
+        // 最終フォールバック: 最後の1文字を返す
+        return text.substring(text.length - 1);
+      }
 
-            // テキストが表示されている場合、フォントサイズを再計算
-            if (currentText) {
-                updateFontSize(currentText);
-            }
+      /**
+       * テキストのフォントサイズを更新し、吹き出し画像を切り替える
+       */
+      function updateFontSize(text) {
+        // テキストが必要に応じて切り詰められる
+        const truncatedText = truncateTextToMaxLines(text);
+        currentText = truncatedText;
+
+        // フォントサイズを計算して適用
+        const fontSize = calculateFontSize(truncatedText);
+        textElement.style.fontSize = fontSize + "px";
+        textElement.textContent = truncatedText;
+
+        // 次のフレームで行数を計算して吹き出し画像を選択（DOMが更新された後）
+        requestAnimationFrame(() => {
+          const lines = getLineCount();
+          const newBubbleImage = selectBubbleImage(lines);
+
+          // 吹き出し画像を切り替え
+          if (bubbleImage.src !== window.location.origin + newBubbleImage) {
+            bubbleImage.src = newBubbleImage;
+            console.log(`Switched to: ${newBubbleImage} (${lines} lines)`);
+          }
+
+          console.log(
+            `Text: ${
+              truncatedText.length
+            } chars, Font: ${fontSize}px, Lines: ${lines}, Device: ${
+              isMobile() ? "Mobile" : "Desktop"
+            }`
+          );
         });
+      }
 
-        // 初期状態で接続確認メッセージ
-        socket.emit('client_ready', {
-            screen_width: window.innerWidth,
-            screen_height: window.innerHeight
+      // 画像の高さを取得（画像が読み込まれるたびに更新）
+      bubbleImage.onload = function () {
+        bubbleImageHeight = bubbleImage.offsetHeight;
+        // 現在の位置でテキスト位置を更新
+        const currentY = parseInt(bubbleImage.style.top) || 0;
+        updateTextPosition(currentY);
+        console.log(`Bubble image loaded. Height: ${bubbleImageHeight}px`);
+      };
+
+      // 接続状態の管理
+      socket.on("connect", () => {
+        console.log("Connected to server");
+        console.log(
+          `Device mode: ${
+            isMobile() ? "Mobile (center-fixed)" : "Desktop (face detection)"
+          }`
+        );
+        statusElement.textContent = "接続済み";
+        statusElement.className = "connected";
+        setTimeout(() => {
+          statusElement.style.display = "none";
+        }, 2000);
+      });
+
+      socket.on("disconnect", () => {
+        console.log("Disconnected from server");
+        statusElement.textContent = "接続切断";
+        statusElement.className = "disconnected";
+        statusElement.style.display = "block";
+      });
+
+      // テキスト更新イベント
+      socket.on("update_text", (data) => {
+        console.log("Received text:", data.text);
+
+        // updateFontSizeが切り詰めとcurrentTextの更新を行う
+        updateFontSize(data.text);
+
+        bubbleImage.classList.add("visible");
+        textContainer.classList.add("visible");
+      });
+
+      // 位置更新イベント
+      socket.on("update_position", (data) => {
+        console.log("Received position:", data.y);
+        updateTextPosition(data.y);
+      });
+
+      // 非表示イベント
+      socket.on("hide_bubble", () => {
+        console.log("Hiding bubble");
+        bubbleImage.classList.remove("visible");
+        textContainer.classList.remove("visible");
+      });
+
+      // 表示イベント
+      socket.on("show_bubble", () => {
+        console.log("Showing bubble");
+
+        // モバイルの場合、初期中央位置を設定
+        if (isMobile()) {
+          const viewportHeight = window.innerHeight;
+          const bubbleHeight = bubbleImage.offsetHeight || bubbleImageHeight;
+          const centerY = viewportHeight * 0.4;
+          const initialY = centerY - bubbleHeight / 2;
+          updateTextPosition(initialY);
+        }
+
+        bubbleImage.classList.add("visible");
+        textContainer.classList.add("visible");
+      });
+
+      // 位置更新関数
+      function updateTextPosition(newY) {
+        const bubbleHeight = bubbleImage.offsetHeight || bubbleImageHeight;
+        const viewportHeight = window.innerHeight;
+
+        let finalY;
+
+        // モバイル: 固定中央位置を使用（顔検出を無視）
+        if (isMobile()) {
+          // ビューポートの40%の位置に配置（中央よりやや上）
+          const centerY = viewportHeight * 0.4;
+          // 吹き出しを垂直方向の中央に配置
+          finalY = centerY - bubbleHeight / 2;
+          console.log(`Mobile mode: Fixed position at 40% (Y=${finalY})`);
+        }
+        // デスクトップ: 顔検出結果をクランプして使用
+        else {
+          // Y位置をクランプして画面内に収める
+          finalY = Math.max(0, Math.min(viewportHeight - bubbleHeight, newY));
+          console.log(
+            `Desktop mode: Face detection Y=${newY}, clamped=${finalY}`
+          );
+        }
+
+        // 位置を適用
+        bubbleImage.style.top = finalY + "px";
+
+        // 吹き出し画像の種類に応じてテキスト位置を調整
+        let textYOffset;
+        if (bubbleImage.src.includes("speech-bubble2.png")) {
+          // 2行用: 中央
+          textYOffset = bubbleHeight / 2;
+        } else if (bubbleImage.src.includes("speech-bubble3.png")) {
+          // 3行以上用: 中央
+          textYOffset = bubbleHeight / 2;
+        } else {
+          // 1行用: 少し上（40%の位置）
+          textYOffset = bubbleHeight * 0.4;
+        }
+
+        const textY = finalY + textYOffset;
+        textContainer.style.top = textY + "px";
+      }
+
+      // ウィンドウリサイズ対応
+      window.addEventListener("resize", () => {
+        containerHeight = window.innerHeight;
+        if (bubbleImage.complete) {
+          bubbleImageHeight = bubbleImage.offsetHeight;
+        }
+
+        // デバイスタイプに応じて位置を再計算
+        if (isMobile()) {
+          // モバイル: 40%位置に再センタリング
+          const centerY = window.innerHeight * 0.4;
+          const newY = centerY - bubbleImageHeight / 2;
+          updateTextPosition(newY);
+        } else {
+          // デスクトップ: 現在の顔検出位置を再クランプ
+          const currentY = parseInt(bubbleImage.style.top) || 0;
+          updateTextPosition(currentY);
+        }
+
+        // テキストが表示されている場合、フォントサイズを再計算
+        if (currentText) {
+          updateFontSize(currentText);
+        }
+      });
+
+      // 初期状態で接続確認メッセージ
+      socket.emit("client_ready", {
+        screen_width: window.innerWidth,
+        screen_height: window.innerHeight,
+      });
+
+      // 言語選択モーダルの処理
+      const languageModal = document.getElementById("language-modal");
+      const sourceLangSelect = document.getElementById("source-lang");
+      const targetLangSelect = document.getElementById("target-lang");
+      const startButton = document.getElementById("start-button");
+      const loadingMessage = document.getElementById("loading-message");
+
+      // スタートボタンのクリックイベント
+      startButton.addEventListener("click", () => {
+        const sourceLang = sourceLangSelect.value;
+        const targetLang = targetLangSelect.value;
+
+        // 同じ言語が選択されていないかチェック
+        if (sourceLang === targetLang) {
+          alert("翻訳元と翻訳先に異なる言語を選択してください");
+          return;
+        }
+
+        // ボタンを無効化し、ローディング表示
+        startButton.disabled = true;
+        loadingMessage.classList.add("visible");
+
+        // サーバーに言語選択を送信
+        socket.emit("select_language", {
+          source_lang: sourceLang,
+          target_lang: targetLang,
         });
+      });
 
-        // 言語選択モーダルの処理
-        const languageModal = document.getElementById('language-modal');
-        const sourceLangSelect = document.getElementById('source-lang');
-        const targetLangSelect = document.getElementById('target-lang');
-        const startButton = document.getElementById('start-button');
-        const loadingMessage = document.getElementById('loading-message');
+      // システム起動完了イベント
+      socket.on("system_started", (data) => {
+        console.log("System started:", data);
 
-        // スタートボタンのクリックイベント
-        startButton.addEventListener('click', () => {
-            const sourceLang = sourceLangSelect.value;
-            const targetLang = targetLangSelect.value;
+        // モーダルを非表示
+        languageModal.classList.add("hidden");
 
-            // 同じ言語が選択されていないかチェック
-            if (sourceLang === targetLang) {
-                alert('翻訳元と翻訳先に異なる言語を選択してください');
-                return;
-            }
+        // ローディングメッセージを非表示
+        loadingMessage.classList.remove("visible");
+        startButton.disabled = false;
 
-            // ボタンを無効化し、ローディング表示
-            startButton.disabled = true;
-            loadingMessage.classList.add('visible');
-
-            // サーバーに言語選択を送信
-            socket.emit('select_language', {
-                source_lang: sourceLang,
-                target_lang: targetLang
-            });
-        });
-
-        // システム起動完了イベント
-        socket.on('system_started', (data) => {
-            console.log('System started:', data);
-
-            // モーダルを非表示
-            languageModal.classList.add('hidden');
-
-            // ローディングメッセージを非表示
-            loadingMessage.classList.remove('visible');
-            startButton.disabled = false;
-
-            console.log(`Language set to: ${data.source_lang} -> ${data.target_lang}`);
-        });
+        console.log(
+          `Language set to: ${data.source_lang} -> ${data.target_lang}`
+        );
+      });
     </script>
-</body>
+  </body>
 </html>
