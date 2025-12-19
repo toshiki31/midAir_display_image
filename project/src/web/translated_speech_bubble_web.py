@@ -10,8 +10,8 @@ import socket
 from amazon_transcribe.client import TranscribeStreamingClient
 from amazon_transcribe.handlers import TranscriptResultStreamHandler
 from amazon_transcribe.model import TranscriptEvent
-import tkinter as tk
 import threading
+import argparse
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 
@@ -47,34 +47,46 @@ class SystemState:
 
 system_state = SystemState()
 
+# グローバルスレッド管理
+audio_thread = None
+face_thread = None
+silence_thread = None
+
 
 # ===============================
-#   言語選択ダイアログ
+#   コマンドライン引数の解析
 # ===============================
-def get_language_settings():
-    lang_root = tk.Tk()
-    lang_root.withdraw()
-    dialog = tk.Toplevel(lang_root)
-    dialog.title("言語設定")
-    tk.Label(dialog, text="翻訳元言語:").grid(row=0, column=0, padx=10, pady=10)
-    tk.Label(dialog, text="翻訳先言語:").grid(row=1, column=0, padx=10, pady=10)
+def parse_arguments():
+    """コマンドライン引数を解析"""
+    parser = argparse.ArgumentParser(
+        description='Web-based Speech Bubble Translation System',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog='''
+Examples:
+  # Start server (language selection in web UI)
+  python %(prog)s
 
-    languages = ["ja-JP", "en-US", "fr-FR", "de-DE", "es-ES"]
-    source_var = tk.StringVar(value=languages[0])
-    target_var = tk.StringVar(value=languages[1])
-    tk.OptionMenu(dialog, source_var, *languages).grid(row=0, column=1, padx=10, pady=10)
-    tk.OptionMenu(dialog, target_var, *languages).grid(row=1, column=1, padx=10, pady=10)
+  # Specify custom port
+  python %(prog)s --port 8080
 
-    result = {}
-    def on_ok():
-        result['source'] = source_var.get()
-        result['target'] = target_var.get()
-        dialog.destroy()
-    tk.Button(dialog, text="OK", command=on_ok).grid(row=2, column=0, columnspan=2, pady=10)
-    dialog.grab_set()
-    lang_root.wait_window(dialog)
-    lang_root.destroy()
-    return result['source'], result['target']
+  # Specify custom host and port
+  python %(prog)s --host 192.168.1.100 --port 8080
+        '''
+    )
+
+    parser.add_argument(
+        '--host',
+        default='0.0.0.0',
+        help='Server host (default: 0.0.0.0)'
+    )
+    parser.add_argument(
+        '--port',
+        type=int,
+        default=5010,
+        help='Server port (default: 5010)'
+    )
+
+    return parser.parse_args()
 
 
 # ===============================
@@ -112,6 +124,42 @@ def handle_client_ready(data):
     logger.info(f'Client ready with screen: {data.get("screen_width")}x{data.get("screen_height")}')
 
 
+@socketio.on('select_language')
+def handle_language_selection(data):
+    """言語選択イベントを処理し、システムスレッドを起動"""
+    global TRANSCRIPT_LANGUAGE_CODE, TARGET_LANGUAGE_CODE
+    global audio_thread, face_thread, silence_thread
+
+    # 言語コードを更新
+    TRANSCRIPT_LANGUAGE_CODE = data.get('source_lang', 'ja-JP')
+    TARGET_LANGUAGE_CODE = data.get('target_lang', 'en-US')
+    logger.info(f'Language selected: {TRANSCRIPT_LANGUAGE_CODE} -> {TARGET_LANGUAGE_CODE}')
+
+    # スレッドが既に起動しているかチェック
+    if audio_thread is None or not audio_thread.is_alive():
+        logger.info("Starting audio transcription thread...")
+        audio_thread = AudioTranscriptionThread()
+        audio_thread.start()
+
+    if face_thread is None or not face_thread.is_alive():
+        logger.info("Starting face detection thread...")
+        face_thread = FaceDetectionThread()
+        face_thread.start()
+
+    if silence_thread is None or not silence_thread.is_alive():
+        logger.info("Starting silence detection thread...")
+        silence_thread = SilenceDetectionThread()
+        silence_thread.start()
+
+    # クライアントにシステム起動完了を通知
+    emit('system_started', {
+        'status': 'success',
+        'source_lang': TRANSCRIPT_LANGUAGE_CODE,
+        'target_lang': TARGET_LANGUAGE_CODE
+    })
+    logger.info("System started successfully")
+
+
 # ===============================
 #   音声認識スレッド
 # ===============================
@@ -128,6 +176,8 @@ class AudioTranscriptionThread(threading.Thread):
         self.loop.run_until_complete(self.transcribe_stream())
 
     async def transcribe_stream(self):
+        audio_stream = None
+        p = None
         try:
             client = TranscribeStreamingClient(region=REGION)
             stream = await client.start_stream_transcription(
@@ -170,9 +220,11 @@ class AudioTranscriptionThread(threading.Thread):
         except Exception as e:
             logger.error(f"Error in transcribe_stream: {e}")
         finally:
-            audio_stream.stop_stream()
-            audio_stream.close()
-            p.terminate()
+            if audio_stream is not None:
+                audio_stream.stop_stream()
+                audio_stream.close()
+            if p is not None:
+                p.terminate()
 
 
 # ===============================
@@ -243,7 +295,7 @@ class FaceDetectionThread(threading.Thread):
 
             if len(faces) > 0:
                 (x, y, w, h) = faces[0]
-                face_top = y
+                face_top = int(y)  # numpy.int64をintに変換
                 # 位置調整
                 new_y = face_top - self.offset
                 if new_y < 0:
@@ -253,7 +305,7 @@ class FaceDetectionThread(threading.Thread):
                 system_state.current_y_position = new_y
 
                 # WebSocketで位置情報を送信
-                socketio.emit('update_position', {'y': new_y})
+                socketio.emit('update_position', {'y': int(new_y)})  # intに変換してJSON serializableにする
                 logger.info(f"Face detected at y={face_top}, bubble position={new_y}")
 
             time.sleep(0.1)
@@ -304,26 +356,8 @@ def get_local_ip():
 #   メインアプリケーション
 # ===============================
 def main():
-    global TRANSCRIPT_LANGUAGE_CODE, TARGET_LANGUAGE_CODE
-
-    # 言語設定
-    source_lang, target_lang = get_language_settings()
-    TRANSCRIPT_LANGUAGE_CODE = source_lang
-    TARGET_LANGUAGE_CODE = target_lang
-    logger.info(f"Selected source language: {source_lang}, target language: {target_lang}")
-
-    # 各スレッドを起動
-    logger.info("Starting audio transcription thread...")
-    audio_thread = AudioTranscriptionThread()
-    audio_thread.start()
-
-    logger.info("Starting face detection thread...")
-    face_thread = FaceDetectionThread()
-    face_thread.start()
-
-    logger.info("Starting silence detection thread...")
-    silence_thread = SilenceDetectionThread()
-    silence_thread.start()
+    # コマンドライン引数を解析
+    args = parse_arguments()
 
     # ローカルIPアドレスを表示
     local_ip = get_local_ip()
@@ -331,12 +365,13 @@ def main():
     print("🎉 Server is running!")
     print("="*60)
     print(f"\n📱 iPhoneのブラウザで以下のURLにアクセスしてください:")
-    print(f"\n   http://{local_ip}:5010")
-    print(f"\n   (または http://localhost:5010 でローカル確認)")
+    print(f"\n   http://{local_ip}:{args.port}")
+    print(f"\n   (または http://localhost:{args.port} でローカル確認)")
+    print(f"\n💡 ブラウザで言語を選択してシステムを開始してください")
     print("\n" + "="*60 + "\n")
 
     # Flaskサーバーを起動（メインスレッドで実行）
-    socketio.run(app, host='0.0.0.0', port=5010, debug=False, use_reloader=False)
+    socketio.run(app, host=args.host, port=args.port, debug=False, use_reloader=False)
 
 
 if __name__ == "__main__":

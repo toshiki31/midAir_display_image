@@ -82,9 +82,147 @@
         #connection-status.disconnected {
             color: red;
         }
+
+        /* Language Selection Modal */
+        #language-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        #language-modal.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 24px;
+        }
+
+        .language-selector {
+            margin-bottom: 25px;
+            text-align: left;
+        }
+
+        .language-selector label {
+            display: block;
+            color: #666;
+            margin-bottom: 8px;
+            font-size: 16px;
+            font-weight: 500;
+        }
+
+        .language-selector select {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background-color: white;
+            color: #333;
+            cursor: pointer;
+        }
+
+        .language-selector select:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        #start-button {
+            width: 100%;
+            padding: 18px;
+            font-size: 20px;
+            font-weight: bold;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background-color 0.3s;
+        }
+
+        #start-button:hover {
+            background-color: #45a049;
+        }
+
+        #start-button:active {
+            background-color: #3d8b40;
+        }
+
+        #start-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+
+        .loading-message {
+            display: none;
+            color: #666;
+            margin-top: 15px;
+            font-size: 16px;
+        }
+
+        .loading-message.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
+    <!-- Language Selection Modal -->
+    <div id="language-modal">
+        <div class="modal-content">
+            <h2>🌐 言語設定</h2>
+
+            <div class="language-selector">
+                <label for="source-lang">翻訳元言語:</label>
+                <select id="source-lang">
+                    <option value="ja-JP">日本語</option>
+                    <option value="en-US">English</option>
+                    <option value="zh-CN">中文（简体）</option>
+                    <option value="zh-TW">中文（繁體）</option>
+                    <option value="ko-KR">한국어</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                </select>
+            </div>
+
+            <div class="language-selector">
+                <label for="target-lang">翻訳先言語:</label>
+                <select id="target-lang">
+                    <option value="en-US" selected>English</option>
+                    <option value="ja-JP">日本語</option>
+                    <option value="zh-CN">中文（简体）</option>
+                    <option value="zh-TW">中文（繁體）</option>
+                    <option value="ko-KR">한국어</option>
+                    <option value="fr-FR">Français</option>
+                    <option value="de-DE">Deutsch</option>
+                    <option value="es-ES">Español</option>
+                </select>
+            </div>
+
+            <button id="start-button">システムを開始</button>
+            <div class="loading-message" id="loading-message">システムを起動中...</div>
+        </div>
+    </div>
+
     <div id="connection-status" class="disconnected">接続中...</div>
     <div id="container">
         <img id="bubble-image" src="/static/images/speech-bubble1.png" alt="Speech Bubble">
@@ -287,6 +425,49 @@
         socket.emit('client_ready', {
             screen_width: window.innerWidth,
             screen_height: window.innerHeight
+        });
+
+        // 言語選択モーダルの処理
+        const languageModal = document.getElementById('language-modal');
+        const sourceLangSelect = document.getElementById('source-lang');
+        const targetLangSelect = document.getElementById('target-lang');
+        const startButton = document.getElementById('start-button');
+        const loadingMessage = document.getElementById('loading-message');
+
+        // スタートボタンのクリックイベント
+        startButton.addEventListener('click', () => {
+            const sourceLang = sourceLangSelect.value;
+            const targetLang = targetLangSelect.value;
+
+            // 同じ言語が選択されていないかチェック
+            if (sourceLang === targetLang) {
+                alert('翻訳元と翻訳先に異なる言語を選択してください');
+                return;
+            }
+
+            // ボタンを無効化し、ローディング表示
+            startButton.disabled = true;
+            loadingMessage.classList.add('visible');
+
+            // サーバーに言語選択を送信
+            socket.emit('select_language', {
+                source_lang: sourceLang,
+                target_lang: targetLang
+            });
+        });
+
+        // システム起動完了イベント
+        socket.on('system_started', (data) => {
+            console.log('System started:', data);
+
+            // モーダルを非表示
+            languageModal.classList.add('hidden');
+
+            // ローディングメッセージを非表示
+            loadingMessage.classList.remove('visible');
+            startButton.disabled = false;
+
+            console.log(`Language set to: ${data.source_lang} -> ${data.target_lang}`);
         });
     </script>
 </body>
