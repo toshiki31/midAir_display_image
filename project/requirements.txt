@@ -33,6 +33,7 @@ pyparsing==3.2.5
 PyQt5==5.15.11
 PyQt5-Qt5==5.15.16
 PyQt5_sip==12.16.1
+pyzmq==25.1.2
 python-dateutil==2.9.0.post0
 pytz==2025.2
 s3transfer==0.10.2
@@ -48,3 +49,4 @@ threadpoolctl==3.6.0
 tzdata==2025.2
 urllib3==2.2.3
 xarray==2025.10.1
+msgpack==1.0.8
