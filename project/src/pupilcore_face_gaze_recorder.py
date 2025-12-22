@@ -22,7 +22,7 @@ def parse_args():
     )
     parser.add_argument("--output", default="output", help="Output directory root")
     parser.add_argument("--fps", type=float, default=30.0, help="Target FPS")
-    parser.add_argument("--duration", type=float, default=60.0, help="Duration in seconds")
+    parser.add_argument("--duration", type=float, default=0.0, help="Duration in seconds (0 for unlimited)")
     parser.add_argument("--aws", action="store_true", help="Use AWS Rekognition for face detection")
     parser.add_argument("--host", default="127.0.0.1", help="Pupil Remote host")
     parser.add_argument("--port", type=int, default=50020, help="Pupil Remote port")
