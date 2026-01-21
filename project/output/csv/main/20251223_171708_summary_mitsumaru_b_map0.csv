@@ -1,0 +1,10 @@
+metric,value
+session_id,20251223_171708
+total_duration_sec,183.024
+total_frames,3221
+face_present_frames,1715
+face_present_duration_sec,57.167
+face_gaze_frames,371
+face_gaze_duration_sec,12.367
+face_gaze_percentage,11.518
+fps,30.0
