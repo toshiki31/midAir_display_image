@@ -555,33 +555,40 @@ class NASATLXAnalyzer:
         """
         print(f"\n  ✓ Creating box plots...")
 
-        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
+        # Plot 1: Condition comparison
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
 
-        # Left: Condition comparison
-        sns.boxplot(data=self.df_long, x='condition', y='total_score', ax=axes[0], palette='Set2')
-        sns.stripplot(data=self.df_long, x='condition', y='total_score', ax=axes[0],
+        sns.boxplot(data=self.df_long, x='condition', y='total_score', ax=ax, palette='Set2')
+        sns.stripplot(data=self.df_long, x='condition', y='total_score', ax=ax,
                      color='black', alpha=0.5, jitter=True, size=8)
-        axes[0].set_title('NASA-TLX Total Score by Condition', fontsize=12, fontweight='bold')
-        axes[0].set_xlabel('Condition', fontsize=11)
-        axes[0].set_ylabel('NASA-TLX Total Score (0-100, lower is better)', fontsize=11)
-        axes[0].grid(True, alpha=0.3, axis='y')
+        ax.set_title('NASA-TLX Total Score by Condition', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Condition', fontsize=11)
+        ax.set_ylabel('NASA-TLX Total Score (0-100, lower is better)', fontsize=11)
+        ax.grid(True, alpha=0.3, axis='y')
 
-        # Right: Condition × Map (reference)
+        plt.tight_layout()
+        filename = "nasatlx_condition_boxplot.png"
+        plt.savefig(self.viz_dir / filename, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {filename}")
+        plt.close()
+
+        # Plot 2: Condition × Map (reference)
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         df_temp = self.df_long.copy()
         df_temp['cond_map'] = df_temp['condition'] + '_map' + df_temp['map'].astype(str)
         order = ['a_map0', 'a_map1', 'b_map0', 'b_map1']
 
-        sns.boxplot(data=df_temp, x='cond_map', y='total_score', ax=axes[1], palette='Set3', order=order)
-        sns.stripplot(data=df_temp, x='cond_map', y='total_score', ax=axes[1],
+        sns.boxplot(data=df_temp, x='cond_map', y='total_score', ax=ax, palette='Set3', order=order)
+        sns.stripplot(data=df_temp, x='cond_map', y='total_score', ax=ax,
                      color='black', alpha=0.4, jitter=True, size=6, order=order)
-        axes[1].set_title('NASA-TLX by Condition × Map (Reference)', fontsize=12, fontweight='bold')
-        axes[1].set_xlabel('Condition × Map', fontsize=11)
-        axes[1].set_ylabel('NASA-TLX Total Score', fontsize=11)
-        axes[1].set_xticklabels(['a (map0)', 'a (map1)', 'b (map0)', 'b (map1)'])
-        axes[1].grid(True, alpha=0.3, axis='y')
+        ax.set_title('NASA-TLX by Condition × Map (Reference)', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Condition × Map', fontsize=11)
+        ax.set_ylabel('NASA-TLX Total Score', fontsize=11)
+        ax.set_xticklabels(['a (map0)', 'a (map1)', 'b (map0)', 'b (map1)'])
+        ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
-        filename = "nasatlx_boxplots.png"
+        filename = "nasatlx_map_interaction_boxplot.png"
         plt.savefig(self.viz_dir / filename, dpi=300, bbox_inches='tight')
         print(f"    Saved: {filename}")
         plt.close()

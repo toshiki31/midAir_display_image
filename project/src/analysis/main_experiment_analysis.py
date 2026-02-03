@@ -672,35 +672,41 @@ class MainExperimentAnalyzer:
         """
         print(f"\n  ✓ Creating box plots for {dv}...")
 
-        fig, axes = plt.subplots(1, 2, figsize=(14, 6))
-
-        # Left: Condition comparison (collapsed across map)
+        # Plot 1: Condition comparison (collapsed across map)
+        fig, ax = plt.subplots(1, 1, figsize=(8, 6))
         df_collapsed = self.df_long.groupby(['participant', 'condition'])[dv].mean().reset_index()
 
-        sns.boxplot(data=df_collapsed, x='condition', y=dv, ax=axes[0], palette='Set2')
-        sns.stripplot(data=df_collapsed, x='condition', y=dv, ax=axes[0],
+        sns.boxplot(data=df_collapsed, x='condition', y=dv, ax=ax, palette='Set2')
+        sns.stripplot(data=df_collapsed, x='condition', y=dv, ax=ax,
                      color='black', alpha=0.5, jitter=True, size=8)
-        axes[0].set_title(f'Condition Comparison\n{dv}', fontsize=12, fontweight='bold')
-        axes[0].set_xlabel('Condition', fontsize=11)
-        axes[0].set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
-        axes[0].grid(True, alpha=0.3, axis='y')
+        ax.set_title(f'Condition Comparison\n{dv}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Condition', fontsize=11)
+        ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
+        ax.grid(True, alpha=0.3, axis='y')
 
-        # Right: 2×2 design (condition × map)
+        plt.tight_layout()
+        filename = f"{dv}_condition_boxplot.png"
+        plt.savefig(self.viz_dir / filename, dpi=300, bbox_inches='tight')
+        print(f"    Saved: {filename}")
+        plt.close()
+
+        # Plot 2: 2×2 design (condition × map interaction)
+        fig, ax = plt.subplots(1, 1, figsize=(10, 6))
         df_temp = self.df_long.copy()
         df_temp['cond_map'] = df_temp['condition'] + '_map' + df_temp['map'].astype(str)
         order = ['a_map0', 'a_map1', 'b_map0', 'b_map1']
 
-        sns.boxplot(data=df_temp, x='cond_map', y=dv, ax=axes[1], palette='Set3', order=order)
-        sns.stripplot(data=df_temp, x='cond_map', y=dv, ax=axes[1],
+        sns.boxplot(data=df_temp, x='cond_map', y=dv, ax=ax, palette='Set3', order=order)
+        sns.stripplot(data=df_temp, x='cond_map', y=dv, ax=ax,
                      color='black', alpha=0.4, jitter=True, size=6, order=order)
-        axes[1].set_title(f'Condition × Map Interaction\n{dv}', fontsize=12, fontweight='bold')
-        axes[1].set_xlabel('Condition × Map', fontsize=11)
-        axes[1].set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
-        axes[1].set_xticklabels(['a (map0)', 'a (map1)', 'b (map0)', 'b (map1)'])
-        axes[1].grid(True, alpha=0.3, axis='y')
+        ax.set_title(f'Condition × Map Interaction\n{dv}', fontsize=12, fontweight='bold')
+        ax.set_xlabel('Condition × Map', fontsize=11)
+        ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
+        ax.set_xticklabels(['a (map0)', 'a (map1)', 'b (map0)', 'b (map1)'])
+        ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
-        filename = f"{dv}_boxplots.png"
+        filename = f"{dv}_map_interaction_boxplot.png"
         plt.savefig(self.viz_dir / filename, dpi=300, bbox_inches='tight')
         print(f"    Saved: {filename}")
         plt.close()

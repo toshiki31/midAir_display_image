@@ -635,6 +635,52 @@ class QuestionnaireAnalyzer:
         print(f"✓ Saved: {filename}")
         plt.close()
 
+        # Create individual plots for each Likert item
+        print("\n" + "=" * 80)
+        print("CREATING INDIVIDUAL LIKERT BOXPLOTS")
+        print("=" * 80)
+
+        for item_en, item_jp in self.likert_items_jp.items():
+            fig, ax = plt.subplots(figsize=(6, 5))
+            item_data = self.df_likert_long[self.df_likert_long['item'] == item_en]
+
+            # Boxplot
+            bp = ax.boxplot(
+                [item_data[item_data['condition'] == cond]['rating'].values for cond in ['A', 'B']],
+                positions=[0, 1],
+                widths=0.6,
+                patch_artist=True,
+                boxprops=dict(facecolor='lightblue', alpha=0.7),
+                medianprops=dict(color='red', linewidth=2),
+                whiskerprops=dict(linewidth=1.5),
+                capprops=dict(linewidth=1.5)
+            )
+
+            # Add individual points
+            for i, cond in enumerate(['A', 'B']):
+                cond_data = item_data[item_data['condition'] == cond]['rating'].values
+                x = np.random.normal(i, 0.04, size=len(cond_data))
+                ax.scatter(x, cond_data, alpha=0.5, s=40, color='darkblue')
+
+            # Add significance brackets if significant
+            p_value = self.results['likert'][item_en]['comparison']['p_value']
+            y_max = item_data['rating'].max()
+            add_significance_brackets(ax, p_value, 0, 1, y_max, height_increment=0.5)
+
+            # Labels and formatting
+            ax.set_title(f"{item_jp}\n(1: 否定的, 7: 肯定的)", fontsize=11, fontweight='bold')
+            ax.set_xticks([0, 1])
+            ax.set_xticklabels(['Condition A', 'Condition B'])
+            ax.set_ylabel('Rating', fontsize=10)
+            ax.set_ylim(0.5, 7.5)
+            ax.grid(True, alpha=0.3, axis='y')
+
+            plt.tight_layout()
+            filename = f"likert_{item_en}_boxplot.png"
+            plt.savefig(self.viz_dir / filename, dpi=300, bbox_inches='tight')
+            print(f"✓ Saved: {filename}")
+            plt.close()
+
     def plot_likert_heatmap(self):
         """Create heatmap of median Likert ratings"""
         print("\n" + "=" * 80)
