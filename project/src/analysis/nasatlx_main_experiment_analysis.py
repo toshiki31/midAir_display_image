@@ -564,6 +564,9 @@ class NASATLXAnalyzer:
         ax.set_title('NASA-TLX Total Score by Condition', fontsize=12, fontweight='bold')
         ax.set_xlabel('Condition', fontsize=11)
         ax.set_ylabel('NASA-TLX Total Score (0-100, lower is better)', fontsize=11)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=11)
+        ax.set_ylim(0, 100)
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -585,6 +588,7 @@ class NASATLXAnalyzer:
         ax.set_xlabel('Condition × Map', fontsize=11)
         ax.set_ylabel('NASA-TLX Total Score', fontsize=11)
         ax.set_xticklabels(['a (map0)', 'a (map1)', 'b (map0)', 'b (map1)'])
+        ax.set_ylim(0, 100)
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -636,9 +640,10 @@ class NASATLXAnalyzer:
         ax.legend(handles=legend_elements, loc='best', fontsize=10)
 
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['Condition a', 'Condition b'], fontsize=12)
+        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=12)
         ax.set_ylabel('NASA-TLX Total Score (lower is better)', fontsize=12)
         ax.set_title('Individual Participant Trajectories\nNASA-TLX Total Score', fontsize=14, fontweight='bold')
+        ax.set_ylim(0, 100)
         ax.grid(True, alpha=0.3)
         ax.axhline(y=50, color='gray', linestyle='--', alpha=0.5, label='Mid-point (50)')
 
@@ -663,6 +668,7 @@ class NASATLXAnalyzer:
         ax.set_xlabel('Condition', fontsize=12)
         ax.set_ylabel('NASA-TLX Total Score (0-100, lower is better)', fontsize=12)
         ax.set_title('Distribution of NASA-TLX Total Score by Condition', fontsize=14, fontweight='bold')
+        ax.set_ylim(0, 100)
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()

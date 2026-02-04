@@ -30,6 +30,9 @@ warnings.filterwarnings('ignore')
 sns.set_style("whitegrid")
 plt.rcParams['figure.figsize'] = (12, 8)
 plt.rcParams['font.size'] = 10
+# Japanese font support
+plt.rcParams['font.sans-serif'] = ['Hiragino Sans', 'Yu Gothic', 'Meirio', 'DejaVu Sans']
+plt.rcParams['axes.unicode_minus'] = False
 
 
 class MainExperimentAnalyzer:
@@ -682,6 +685,8 @@ class MainExperimentAnalyzer:
         ax.set_title(f'Condition Comparison\n{dv}', fontsize=12, fontweight='bold')
         ax.set_xlabel('Condition', fontsize=11)
         ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
+        ax.set_xticks([0, 1])
+        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=11)
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -757,7 +762,7 @@ class MainExperimentAnalyzer:
         ax.legend(handles=legend_elements, loc='best', fontsize=10)
 
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['Condition a', 'Condition b'], fontsize=12)
+        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=12)
         ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=12)
         ax.set_title(f'Individual Participant Trajectories\n{dv}', fontsize=14, fontweight='bold')
         ax.grid(True, alpha=0.3)

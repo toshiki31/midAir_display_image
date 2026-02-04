@@ -622,9 +622,9 @@ class QuestionnaireAnalyzer:
             add_significance_brackets(ax, p_value, 0, 1, y_max, height_increment=0.5)
 
             # Labels and formatting
-            ax.set_title(f"{item_jp}\n(1: 否定的, 7: 肯定的)", fontsize=11, fontweight='bold')
+            ax.set_title(f"{item_jp}\n(1: そう思わない, 7: そう思う)", fontsize=11, fontweight='bold')
             ax.set_xticks([0, 1])
-            ax.set_xticklabels(['Condition A', 'Condition B'])
+            ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'])
             ax.set_ylabel('Rating', fontsize=10)
             ax.set_ylim(0.5, 7.5)
             ax.grid(True, alpha=0.3, axis='y')
@@ -668,9 +668,9 @@ class QuestionnaireAnalyzer:
             add_significance_brackets(ax, p_value, 0, 1, y_max, height_increment=0.5)
 
             # Labels and formatting
-            ax.set_title(f"{item_jp}\n(1: 否定的, 7: 肯定的)", fontsize=11, fontweight='bold')
+            ax.set_title(f"{item_jp}\n(1: そう思わない, 7: そう思う)", fontsize=11, fontweight='bold')
             ax.set_xticks([0, 1])
-            ax.set_xticklabels(['Condition A', 'Condition B'])
+            ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'])
             ax.set_ylabel('Rating', fontsize=10)
             ax.set_ylim(0.5, 7.5)
             ax.grid(True, alpha=0.3, axis='y')
@@ -748,16 +748,16 @@ class QuestionnaireAnalyzer:
             capprops=dict(linewidth=1.5)
         )
 
-        # Add connected individual points (showing pairing)
-        for participant in self.df_sus_scores['participant'].unique():
-            part_data = self.df_sus_scores[self.df_sus_scores['participant'] == participant]
-            score_a = part_data[part_data['condition'] == 'A']['sus_score'].values[0]
-            score_b = part_data[part_data['condition'] == 'B']['sus_score'].values[0]
-            ax.plot([0, 1], [score_a, score_b], 'o-', alpha=0.4, color='gray', linewidth=1)
+        # Connection lines removed per user request
+        # for participant in self.df_sus_scores['participant'].unique():
+        #     part_data = self.df_sus_scores[self.df_sus_scores['participant'] == participant]
+        #     score_a = part_data[part_data['condition'] == 'A']['sus_score'].values[0]
+        #     score_b = part_data[part_data['condition'] == 'B']['sus_score'].values[0]
+        #     ax.plot([0, 1], [score_a, score_b], 'o-', alpha=0.4, color='gray', linewidth=1)
 
-        # Add benchmark line
-        ax.axhline(y=68, color='blue', linestyle='--', linewidth=2, alpha=0.7, label='Benchmark (68)')
-        ax.axhline(y=70, color='green', linestyle='--', linewidth=2, alpha=0.7, label='Good (≥70)')
+        # Benchmark lines removed per user request
+        # ax.axhline(y=68, color='blue', linestyle='--', linewidth=2, alpha=0.7, label='Benchmark (68)')
+        # ax.axhline(y=70, color='green', linestyle='--', linewidth=2, alpha=0.7, label='Good (≥70)')
 
         # Add significance brackets
         p_value = self.results['sus']['comparison']['p_value']
@@ -768,10 +768,10 @@ class QuestionnaireAnalyzer:
         ax.set_title('SUS Scores by Condition\n(System Usability Scale: 0-100)',
                     fontsize=14, fontweight='bold')
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['Condition A\n(Smartphone)', 'Condition B\n(Half-mirror)'], fontsize=11)
+        ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'], fontsize=11)
         ax.set_ylabel('SUS Score', fontsize=12)
         ax.set_ylim(0, 100)
-        ax.legend(loc='upper left')
+        # ax.legend(loc='upper left')  # Legend removed since no benchmark lines
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -849,19 +849,19 @@ class QuestionnaireAnalyzer:
             ax.text(i, mean + std + 2, f'{mean:.1f}', ha='center', va='bottom',
                    fontsize=12, fontweight='bold')
 
-        # Add benchmark lines
-        ax.axhline(y=68, color='blue', linestyle='--', linewidth=2, alpha=0.5, label='Benchmark (68)')
-        ax.axhline(y=70, color='green', linestyle='--', linewidth=2, alpha=0.5, label='Good (≥70)')
-        ax.axhline(y=50, color='red', linestyle='--', linewidth=2, alpha=0.5, label='Poor (<50)')
+        # Benchmark lines removed per user request
+        # ax.axhline(y=68, color='blue', linestyle='--', linewidth=2, alpha=0.5, label='Benchmark (68)')
+        # ax.axhline(y=70, color='green', linestyle='--', linewidth=2, alpha=0.5, label='Good (≥70)')
+        # ax.axhline(y=50, color='red', linestyle='--', linewidth=2, alpha=0.5, label='Poor (<50)')
 
         # Labels and formatting
         ax.set_title('Mean SUS Scores by Condition\n(Error bars = ±1 SD)',
                     fontsize=14, fontweight='bold')
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['Condition A\n(Smartphone)', 'Condition B\n(Half-mirror)'], fontsize=11)
+        ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'], fontsize=11)
         ax.set_ylabel('Mean SUS Score', fontsize=12)
         ax.set_ylim(0, 100)
-        ax.legend(loc='upper left')
+        # ax.legend(loc='upper left')  # Legend removed since no benchmark lines
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()
@@ -1211,7 +1211,7 @@ class QuestionnaireAnalyzer:
         self.plot_likert_boxplots()
         self.plot_likert_heatmap()
         self.plot_sus_boxplot()
-        self.plot_sus_trajectories()
+        # self.plot_sus_trajectories()  # Disabled: trajectory lines not needed
         self.plot_sus_comparison()
 
         # Save results
