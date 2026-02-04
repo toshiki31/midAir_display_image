@@ -35,6 +35,53 @@ plt.rcParams['font.sans-serif'] = ['Hiragino Sans', 'Yu Gothic', 'Meirio', 'Deja
 plt.rcParams['axes.unicode_minus'] = False
 
 
+def add_significance_brackets(ax, p_value, x1, x2, y_max, height_increment=None):
+    """
+    Add significance bracket and asterisk to plot
+
+    Parameters:
+    - ax: matplotlib axis object
+    - p_value: p-value from statistical test
+    - x1, x2: x-axis positions for bracket ends
+    - y_max: maximum y value for positioning bracket
+    - height_increment: spacing above data (auto if None)
+    """
+    if p_value >= 0.05:
+        return
+
+    # Auto-calculate height increment if not provided
+    if height_increment is None:
+        y_range = ax.get_ylim()[1] - ax.get_ylim()[0]
+        height_increment = y_range * 0.08
+
+    # Determine significance level
+    if p_value < 0.001:
+        sig_symbol = '***'
+    elif p_value < 0.01:
+        sig_symbol = '**'
+    elif p_value < 0.05:
+        sig_symbol = '*'
+    else:
+        return
+
+    # Calculate bracket height
+    bracket_height = y_max + height_increment
+
+    # Draw bracket
+    bracket_y_offset = height_increment * 0.15
+    ax.plot([x1, x1], [bracket_height - bracket_y_offset, bracket_height],
+            'k-', linewidth=1.5)
+    ax.plot([x1, x2], [bracket_height, bracket_height],
+            'k-', linewidth=1.5)
+    ax.plot([x2, x2], [bracket_height - bracket_y_offset, bracket_height],
+            'k-', linewidth=1.5)
+
+    # Add asterisk
+    mid_x = (x1 + x2) / 2
+    ax.text(mid_x, bracket_height + height_increment * 0.1, sig_symbol,
+            ha='center', va='bottom', fontsize=12, fontweight='bold')
+
+
 class MainExperimentAnalyzer:
     """
     Statistical analysis for 2×2 within-subject HCI experiment
@@ -682,6 +729,13 @@ class MainExperimentAnalyzer:
         sns.boxplot(data=df_collapsed, x='condition', y=dv, ax=ax, palette='Set2')
         sns.stripplot(data=df_collapsed, x='condition', y=dv, ax=ax,
                      color='black', alpha=0.5, jitter=True, size=8)
+
+        # Add significance brackets if paired comparison has been run
+        if f'{dv}_paired' in self.results:
+            p_value = self.results[f'{dv}_paired']['p_value']
+            y_max = df_collapsed[dv].max()
+            add_significance_brackets(ax, p_value, 0, 1, y_max)
+
         ax.set_title(f'Condition Comparison\n{dv}', fontsize=12, fontweight='bold')
         ax.set_xlabel('Condition', fontsize=11)
         ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
