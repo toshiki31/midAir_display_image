@@ -347,10 +347,9 @@ class MapSabunAnalyzer:
         sns.stripplot(data=df_long, x='condition', y='map_sabun', ax=ax,
                      color='black', alpha=0.5, jitter=True, size=8)
 
-        ax.set_title('Map Sabun Comparison\n(Condition A vs Condition B)',
-                    fontsize=12, fontweight='bold')
-        ax.set_xlabel('Condition', fontsize=11)
-        ax.set_ylabel('Map Sabun (Deviation)', fontsize=11)
+        ax.set_title('マップ逸脱スコア', fontsize=12, fontweight='bold')
+        ax.set_xlabel('')
+        ax.set_ylabel('マップ逸脱スコア', fontsize=11)
         ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'],
                           fontsize=11)
         ax.grid(True, alpha=0.3, axis='y')

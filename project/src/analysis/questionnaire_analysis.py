@@ -765,11 +765,10 @@ class QuestionnaireAnalyzer:
         add_significance_brackets(ax, p_value, 0, 1, y_max, height_increment=5)
 
         # Labels and formatting
-        ax.set_title('SUS Scores by Condition\n(System Usability Scale: 0-100)',
-                    fontsize=14, fontweight='bold')
+        ax.set_title('SUS スコア', fontsize=14, fontweight='bold')
         ax.set_xticks([0, 1])
         ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'], fontsize=11)
-        ax.set_ylabel('SUS Score', fontsize=12)
+        ax.set_ylabel('SUS スコア', fontsize=12)
         ax.set_ylim(0, 100)
         # ax.legend(loc='upper left')  # Legend removed since no benchmark lines
         ax.grid(True, alpha=0.3, axis='y')

@@ -736,11 +736,19 @@ class MainExperimentAnalyzer:
             y_max = df_collapsed[dv].max()
             add_significance_brackets(ax, p_value, 0, 1, y_max)
 
-        ax.set_title(f'Condition Comparison\n{dv}', fontsize=12, fontweight='bold')
-        ax.set_xlabel('Condition', fontsize=11)
-        ax.set_ylabel(dv.replace('_', ' ').title(), fontsize=11)
+        title_map = {
+            'total_duration_sec': 'タスク遂行時間',
+            'face_gaze_duration_sec': '顔注視時間',
+        }
+        ylabel_map = {
+            'total_duration_sec': 'タスク遂行時間（秒）',
+            'face_gaze_duration_sec': '顔注視時間（秒）',
+        }
+        ax.set_title(title_map.get(dv, dv.replace('_', ' ').title()), fontsize=12, fontweight='bold')
+        ax.set_xlabel('')
+        ax.set_ylabel(ylabel_map.get(dv, dv.replace('_', ' ').title()), fontsize=11)
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=11)
+        ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'], fontsize=11)
         ax.grid(True, alpha=0.3, axis='y')
 
         plt.tight_layout()

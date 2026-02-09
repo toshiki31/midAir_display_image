@@ -342,8 +342,8 @@ class CommunicationCountAnalyzer:
                 size=8,
             )
 
-            ax.set_title(f"{metric_label}\n(条件A vs 条件B)", fontsize=12, fontweight="bold")
-            ax.set_xlabel("条件", fontsize=11)
+            ax.set_title(f"{metric_label}", fontsize=12, fontweight="bold")
+            ax.set_xlabel("")
             ax.set_ylabel("回数", fontsize=11)
             ax.set_xticklabels(
                 ["スマートフォン\n(条件A)", "椅子型空中像インタフェース\n(条件B)"], fontsize=11

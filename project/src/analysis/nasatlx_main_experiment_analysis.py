@@ -561,11 +561,11 @@ class NASATLXAnalyzer:
         sns.boxplot(data=self.df_long, x='condition', y='total_score', ax=ax, palette='Set2')
         sns.stripplot(data=self.df_long, x='condition', y='total_score', ax=ax,
                      color='black', alpha=0.5, jitter=True, size=8)
-        ax.set_title('NASA-TLX Total Score by Condition', fontsize=12, fontweight='bold')
-        ax.set_xlabel('Condition', fontsize=11)
-        ax.set_ylabel('NASA-TLX Total Score (0-100, lower is better)', fontsize=11)
+        ax.set_title('NASA-TLX スコア', fontsize=12, fontweight='bold')
+        ax.set_xlabel('')
+        ax.set_ylabel('NASA-TLX スコア', fontsize=11)
         ax.set_xticks([0, 1])
-        ax.set_xticklabels(['スマートフォン\n(条件a)', '椅子型空中像インタフェース\n(条件b)'], fontsize=11)
+        ax.set_xticklabels(['スマートフォン\n(条件A)', '椅子型空中像インタフェース\n(条件B)'], fontsize=11)
         ax.set_ylim(0, 100)
         ax.grid(True, alpha=0.3, axis='y')
 
