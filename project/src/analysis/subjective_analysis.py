@@ -476,6 +476,43 @@ class SubjectiveAnalysis:
         print(f"✓ Saved: {filename}")
         plt.close()
 
+        # Create individual plots for each evaluation item
+        print("\n" + "=" * 80)
+        print("CREATING INDIVIDUAL BOX PLOTS")
+        print("=" * 80)
+
+        for item in self.eval_items.values():
+            fig, ax = plt.subplots(figsize=(8, 6))
+            item_data = self.df_long[self.df_long['evaluation_item'] == item]
+
+            sns.boxplot(
+                data=item_data,
+                x='distance',
+                y='rating',
+                order=self.distance_order,
+                palette='Set2',
+                ax=ax
+            )
+
+            ax.set_title(custom_titles[item], fontsize=12, fontweight='bold')
+            ax.set_xlabel('Distance', fontsize=10)
+            ax.set_ylabel('Rating (1-7)', fontsize=10)
+            ax.set_ylim(0.5, 7.5)
+            ax.grid(True, alpha=0.3, axis='y')
+
+            # Add significance brackets if post-hoc results provided
+            if posthoc_results is not None and item in posthoc_results and posthoc_results[item] is not None:
+                y_max = item_data.groupby('distance')['rating'].max().max()
+                x_positions = {dist: i for i, dist in enumerate(self.distance_order)}
+                add_significance_brackets(ax, posthoc_results[item], x_positions, y_max,
+                                         self.distance_order, height_increment=0.4)
+
+            plt.tight_layout()
+            filename = f"boxplot_{item}.png"
+            plt.savefig(output_dir / filename, dpi=300, bbox_inches='tight')
+            print(f"✓ Saved: {filename}")
+            plt.close()
+
     def visualize_heatmap(self, output_dir):
         """Create heatmap of median ratings"""
         print("\n" + "=" * 80)
